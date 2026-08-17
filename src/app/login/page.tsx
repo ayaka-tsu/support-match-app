@@ -1,36 +1,35 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 
-export default function SignupPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const handleSignup = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const router = useRouter();
+  const handleLogin = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
-      options: {
-        emailRedirectTo: "http://localhost:3000/signup-complete",
-      },
     });
 
     if (error) {
+      alert("メールアドレスまたはパスワードが違います");
       console.error(error.message);
       return;
     }
-
-    alert("登録確認メールを送信しました");
+    alert("ログインに成功しました");
+    router.push("/dashboard");
   };
 
   return (
     <main>
-      <h1>新規登録</h1>
-      <form onSubmit={handleSignup}>
+      <h1>ログイン</h1>
+      <form onSubmit={handleLogin}>
         <input
           type="email"
           placeholder="メールアドレス"
@@ -45,7 +44,7 @@ export default function SignupPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button type="submit">登録</button>
+        <button type="submit">ログイン</button>
       </form>
     </main>
   );
