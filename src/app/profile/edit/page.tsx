@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import HamburgerMenu from "@/components/HamburgerMenu";
 
 const supabase = createClient();
 
@@ -69,6 +70,8 @@ export default function EditProfilePage() {
 
   return (
     <main>
+      <HamburgerMenu />
+
       <h1>プロフィール編集</h1>
 
       <input

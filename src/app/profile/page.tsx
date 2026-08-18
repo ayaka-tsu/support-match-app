@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import HamburgerMenu from "@/components/HamburgerMenu";
+
 
 const supabase = createClient();
 
@@ -13,16 +15,6 @@ export default function ProfilePage() {
   const [email, setEmail] = useState("");
   const router = useRouter();
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error(error.message);
-      return;
-    }
-
-    router.push("/login");
-  };
   useEffect(() => {
     const getUser = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -92,6 +84,8 @@ export default function ProfilePage() {
 
   return (
     <main>
+              <HamburgerMenu />
+      
       <Link href="/profile/edit">編集する</Link>
       <h1>プロフィール</h1>
 
@@ -107,7 +101,6 @@ export default function ProfilePage() {
         checked={supportAvailable}
         onChange={(e) => updateSupportAvailable(e.target.checked)}
       />
-      <button onClick={handleLogout}>ログアウト</button>
     </main>
   );
 }

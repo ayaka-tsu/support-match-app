@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 
 const supabase = createClient();
 
@@ -47,6 +48,7 @@ export default function SignupPage() {
 
         <button type="submit">登録</button>
       </form>
+      <Link href="/login">登録済の方はこちら</Link>
     </main>
   );
 }

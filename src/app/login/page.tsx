@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 
 const supabase = createClient();
 
@@ -46,6 +47,7 @@ export default function LoginPage() {
 
         <button type="submit">ログイン</button>
       </form>
+      <Link href="/signup">新規登録はこちら</Link>
     </main>
   );
 }
