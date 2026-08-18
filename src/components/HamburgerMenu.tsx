@@ -30,7 +30,7 @@ export default function HamburgerMenu() {
       return;
     }
 
-    router.push("/login");
+    router.push("/");
   };
 
   return (
@@ -39,7 +39,7 @@ export default function HamburgerMenu() {
 
       {isOpen && (
         <div>
-          <div>コンセプト</div>
+          <Link href="/consept">コンセプト</Link>
 
           {!user && (
             <div>
