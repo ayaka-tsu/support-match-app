@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -23,45 +18,46 @@ model Profile {
 }
 
 model Store {
-  id               String           @id @default(uuid()) @db.Uuid
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name             String
+  address          String?
   support_requests SupportRequest[]
 
   @@map("stores")
 }
 
 model SupportRequest {
-  id         String    @id @default(uuid()) @db.Uuid
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id    String    @db.Uuid
   store_id   String    @db.Uuid
-  store      Store     @relation(fields: [store_id], references: [id])
-  matching   Matching?
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
+  matching   Matching?
+  store      Store     @relation(fields: [store_id], references: [id])
 
   @@map("support_requests")
 }
 
 model Matching {
-  id                 String         @id @default(uuid()) @db.Uuid
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   support_request_id String         @unique @db.Uuid
   supporter_id       String         @db.Uuid
-  support_request    SupportRequest @relation(fields: [support_request_id], references: [id])
-  messages           Message[]
   created_at         DateTime       @default(now())
   updated_at         DateTime       @updatedAt
+  support_request    SupportRequest @relation(fields: [support_request_id], references: [id])
+  messages           Message[]
 
   @@map("matchings")
 }
 
 model Message {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sender_id   String   @db.Uuid
   matching_id String   @db.Uuid
   content     String
-  matching    Matching @relation(fields: [matching_id], references: [id])
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
+  matching    Matching @relation(fields: [matching_id], references: [id])
 
   @@map("messages")
 }
