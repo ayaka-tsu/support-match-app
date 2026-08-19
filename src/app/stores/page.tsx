@@ -1,4 +1,5 @@
 import HamburgerMenu from "@/components/HamburgerMenu";
+import StoresList from "@/components/StoresList";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function StoresPage() {
@@ -7,15 +8,13 @@ export default async function StoresPage() {
     .from("stores")
     .select("id, name");
   if (error) {
-    console.error(error);
+    console.error("stores error:", error.message);
   }
   return (
     <main>
       <HamburgerMenu />
       <h1>店舗選択</h1>
-      {stores?.map((store) => (
-        <div key={store.id}>{store.name}</div>
-      ))}
+      <StoresList stores={stores ?? []} />
     </main>
   );
 }
