@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useStore } from "@/context/StoreContext";
@@ -24,8 +24,40 @@ export default function StoresList({ stores }: StoreListProps) {
   const [newStoreName, setNewStoreName] = useState("");
   const [newStoreAddress, setNewStoreAddress] = useState("");
   const [addStoreError, setAddStoreError] = useState("");
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [requestMessage, setRequestMessage] = useState("");
   const [searchType, setSearchType] = useState<"name" | "address">("name");
   const router = useRouter();
+
+  useEffect(() => {
+    const checkActiveReruest = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const thirtyMinutesAgo = new Date(
+        Date.now() - 30 * 60 * 1000,
+      ).toISOString();
+
+      const { data, error } = await supabase
+        .from("support_requests")
+        .select("id")
+        .eq("user_id", user.id)
+        .gte("created_at", thirtyMinutesAgo)
+        .limit(1);
+
+      if (error) {
+        console.error("active request check error", error.message);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setIsRequesting(true);
+      }
+    };
+    checkActiveReruest();
+  }, []);
 
   const handleSelectStore = () => {
     if (!selectedStore) return;
@@ -71,6 +103,7 @@ export default function StoresList({ stores }: StoreListProps) {
 
   return (
     <div>
+      {requestMessage && <p>{requestMessage}</p>}
       <button onClick={() => setSearchType("name")}>店舗名で検索</button>
 
       <button onClick={() => setSearchType("address")}>住所で検索</button>
@@ -84,7 +117,17 @@ export default function StoresList({ stores }: StoreListProps) {
         <div key={store.id}>
           {store.name}
           {store.address && <p>{store.address}</p>}
-          <button onClick={() => setSelectedStore(store)}>選択</button>
+          <button
+            onClick={() => {
+              if (isRequesting) {
+                setRequestMessage("現在サポート依頼中です");
+                return;
+              }
+              setSelectedStore(store);
+            }}
+          >
+            選択
+          </button>
         </div>
       ))}
 
@@ -110,11 +153,12 @@ export default function StoresList({ stores }: StoreListProps) {
           />
 
           <button onClick={handleAddStore}>この店舗を選択する</button>
+          <button onClick={() => setIsAddingStore(false)}>閉じる</button>
           {addStoreError && <p>{addStoreError}</p>}
         </div>
       )}
 
-      {selectedStore && (
+      {selectedStore && !isRequesting && (
         <div>
           <p>選択中 : {selectedStore.name}</p>
 
