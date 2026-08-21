@@ -8,11 +8,14 @@ datasource db {
 }
 
 model Profile {
-  id                String   @id @db.Uuid
-  nickname          String
-  support_available Boolean  @default(false)
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  id                  String    @id @db.Uuid
+  nickname            String
+  support_available   Boolean   @default(false)
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  latitude            Float?
+  longitude           Float?
+  location_updated_at DateTime?
 
   @@map("profiles")
 }
@@ -27,13 +30,16 @@ model Store {
 }
 
 model SupportRequest {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id    String    @db.Uuid
-  store_id   String    @db.Uuid
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-  matching   Matching?
-  store      Store     @relation(fields: [store_id], references: [id])
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String    @db.Uuid
+  store_id            String    @db.Uuid
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  latitude            Float?
+  longitude           Float?
+  location_updated_at DateTime?
+  matching            Matching?
+  store               Store     @relation(fields: [store_id], references: [id])
 
   @@map("support_requests")
 }
@@ -44,6 +50,8 @@ model Matching {
   supporter_id       String         @db.Uuid
   created_at         DateTime       @default(now())
   updated_at         DateTime       @updatedAt
+  status             String         @default("active")
+  ended_at           DateTime?
   support_request    SupportRequest @relation(fields: [support_request_id], references: [id])
   messages           Message[]
 

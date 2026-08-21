@@ -25,10 +25,14 @@ export default function EditProfilePage() {
         .from("profiles")
         .select("nickname, support_available")
         .eq("id", data.user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error(profileError.message);
+        return;
+      }
+
+      if (!profileData) {
         return;
       }
       setNickname(profileData.nickname);
@@ -42,9 +46,17 @@ export default function EditProfilePage() {
       console.error(useError.message);
       return;
     }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
     const { error } = await supabase
       .from("profiles")
-      .update({
+      .upsert({
+        id: user.id,
         nickname: nickname,
         updated_at: new Date().toISOString(),
       })

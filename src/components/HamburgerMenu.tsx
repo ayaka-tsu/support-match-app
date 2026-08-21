@@ -52,7 +52,7 @@ export default function HamburgerMenu() {
               <Link href="/profile">プロフィール</Link>
               <Link href="/stores">店舗</Link>
               <Link href="/support-requests">サポート依頼</Link>
-              <Link href="/matchings">マッチング</Link>
+              <Link href="/matching">マッチング</Link>
               <Link href="/messages">メッセージ</Link>
 
               <button onClick={handleLogout}>ログアウト</button>

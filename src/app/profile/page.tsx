@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import HamburgerMenu from "@/components/HamburgerMenu";
 
-
 const supabase = createClient();
 
 export default function ProfilePage() {
@@ -28,12 +27,17 @@ export default function ProfilePage() {
         .from("profiles")
         .select("nickname, support_available")
         .eq("id", data.user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error(profileError.message);
         return;
       }
+
+      if (!profileData) {
+        return;
+      }
+
       setNickname(profileData.nickname);
       setSupportAvailable(profileData.support_available);
     };
@@ -84,8 +88,8 @@ export default function ProfilePage() {
 
   return (
     <main>
-              <HamburgerMenu />
-      
+      <HamburgerMenu />
+
       <Link href="/profile/edit">編集する</Link>
       <h1>プロフィール</h1>
 
