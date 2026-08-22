@@ -8,6 +8,8 @@ const supabase = createClient();
 
 export default function MatchingPage() {
   const [isMatching, setIsMatching] = useState(false);
+  const [matchedUserId, setMatchedUserId] = useState<string | null>(null);
+  const [matchedNickname, setMatchedNickname] = useState("");
 
   useEffect(() => {
     const checkMatching = async () => {
@@ -28,6 +30,19 @@ export default function MatchingPage() {
       }
       if (data && data.length > 0) {
         setIsMatching(true);
+
+        const { data: matchedRequest, error: matchedRequestError } =
+          await supabase
+            .from("support_requests")
+            .select("user_id")
+            .eq("id", data[0].support_request_id)
+            .single();
+
+        if (matchedRequestError) {
+          console.error("matched request error:", matchedRequestError.message);
+          return;
+        }
+        setMatchedUserId(matchedRequest.user_id);
       }
 
       const { data: profileData, error: profileError } = await supabase
@@ -77,7 +92,7 @@ export default function MatchingPage() {
       const requestIds = requestData.map((request) => request.id);
       const { data: matchingData, error: matchingError } = await supabase
         .from("matchings")
-        .select("id")
+        .select("id, supporter_id")
         .in("support_request_id", requestIds);
 
       if (matchingError) {
@@ -87,6 +102,7 @@ export default function MatchingPage() {
 
       if (matchingData && matchingData.length > 0) {
         setIsMatching(true);
+        setMatchedUserId(matchingData[0].supporter_id);
       }
       const thirtyMinutesAgo = new Date(
         Date.now() - 30 * 60 * 1000,
@@ -222,12 +238,42 @@ export default function MatchingPage() {
 
     checkMatching();
   }, []);
+
+  useEffect(() => {
+    if (!matchedUserId) {
+      return;
+    }
+
+    const fetchMatchedProfile = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("nickname")
+        .eq("id", matchedUserId)
+        .single();
+
+      if (error) {
+        console.error("matched profile error:", error.message);
+        return;
+      }
+
+      setMatchedNickname(data.nickname);
+    };
+    fetchMatchedProfile();
+  }, [matchedUserId]);
+
   return (
     <main>
       <HamburgerMenu />
       <h1>マッチング</h1>
 
-      {isMatching ? <p>マッチング中です</p> : <p>現在マッチングはありません</p>}
+      {isMatching ? (
+        <>
+          <p>マッチング中です</p>
+          <p>相手: {matchedNickname}</p>
+        </>
+      ) : (
+        <p>現在マッチングはありません</p>
+      )}
     </main>
   );
 }
