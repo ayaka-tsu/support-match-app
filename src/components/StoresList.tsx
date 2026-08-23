@@ -27,6 +27,7 @@ export default function StoresList({ stores }: StoreListProps) {
   const [isRequesting, setIsRequesting] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
   const [searchType, setSearchType] = useState<"name" | "address">("name");
+  const [isMatching, setIsMatching] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,6 +36,60 @@ export default function StoresList({ stores }: StoreListProps) {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+
+      const { data: supporterMatching, error: supporterMatchingError } =
+        await supabase
+          .from("matchings")
+          .select("id")
+          .eq("supporter_id", user.id)
+          .eq("status", "active");
+
+      if (supporterMatchingError) {
+        console.error(
+          "supporter matching check error",
+          supporterMatchingError.message,
+        );
+        return;
+      }
+
+      const { data: userRequests, error: userRequestsError } = await supabase
+        .from("support_requests")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (userRequestsError) {
+        console.error("user requests check error", userRequestsError.message);
+        return;
+      }
+
+      const requestIds = userRequests?.map((request) => request.id) ?? [];
+
+      let hasRequesterMatching = false;
+
+      if (requestIds.length > 0) {
+        const { data: requesterMatching, error: requesterMatchingError } =
+          await supabase
+            .from("matchings")
+            .select("id")
+            .in("support_request_id", requestIds)
+            .eq("status", "active");
+        if (requesterMatchingError) {
+          console.error(
+            "requester matching check error",
+            requesterMatchingError.message,
+          );
+          return;
+        }
+        hasRequesterMatching =
+          requesterMatching !== null && requesterMatching.length > 0;
+      }
+
+      if (
+        (supporterMatching && supporterMatching.length > 0) ||
+        hasRequesterMatching
+      ) {
+        setIsMatching(true);
+      }
 
       const thirtyMinutesAgo = new Date(
         Date.now() - 30 * 60 * 1000,
@@ -119,8 +174,10 @@ export default function StoresList({ stores }: StoreListProps) {
           {store.address && <p>{store.address}</p>}
           <button
             onClick={() => {
-              if (isRequesting) {
-                setRequestMessage("現在サポート依頼中です");
+              if (isRequesting || isMatching) {
+                setRequestMessage(
+                  isMatching ? "現在マッチングです" : "現在サポート依頼中です",
+                );
                 return;
               }
               setSelectedStore(store);

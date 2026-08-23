@@ -29,6 +29,18 @@ export default function MatchingPage() {
         return;
       }
       if (data && data.length > 0) {
+        const { error: supportOffError } = await supabase
+          .from("profiles")
+          .update({
+            support_available: false,
+          })
+          .eq("id", user.id);
+
+        if (supportOffError) {
+          console.error("support off error:", supportOffError.message);
+          return;
+        }
+
         setIsMatching(true);
 
         const { data: matchedRequest, error: matchedRequestError } =
@@ -233,6 +245,18 @@ export default function MatchingPage() {
         return;
       }
 
+      const { error: supportOffError } = await supabase
+        .from("profiles")
+        .update({
+          support_available: false,
+        })
+        .eq("id", matchedSupporter.id);
+
+      if (supportOffError) {
+        console.error("support off error:", supportOffError.message);
+        return;
+      }
+
       setIsMatching(true);
     };
 
@@ -260,6 +284,36 @@ export default function MatchingPage() {
     };
     fetchMatchedProfile();
   }, [matchedUserId]);
+
+  useEffect(() => {
+    if (!isMatching) {
+      return;
+    }
+
+    const turnOffSupport = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        return;
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          support_available: false,
+        })
+        .eq("id", user.id);
+
+      if (error) {
+        console.error("support off error:", error.message);
+        return;
+      }
+    };
+
+    turnOffSupport();
+  }, [isMatching]);
 
   return (
     <main>

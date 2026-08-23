@@ -24,6 +24,19 @@ export default function LoginPage() {
       return;
     }
     alert("ログインに成功しました");
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({
+          support_available: false,
+        })
+        .eq("id", user.id);
+    }
     router.push("/dashboard");
   };
 
