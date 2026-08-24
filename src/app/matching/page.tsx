@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import HamburgerMenu from "@/components/HamburgerMenu";
+import { useRouter } from "next/navigation";
 
 const supabase = createClient();
 
@@ -10,6 +11,14 @@ export default function MatchingPage() {
   const [isMatching, setIsMatching] = useState(false);
   const [matchedUserId, setMatchedUserId] = useState<string | null>(null);
   const [matchedNickname, setMatchedNickname] = useState("");
+  const [matchingId, setMatchingId] = useState<string | null>(null);
+  const [isEnded, setIsEnded] = useState(false);
+  const [isWithinMessageGracePeriod, setIsWithinMessageGracePeriod] =
+    useState(false);
+  const [matchingCreatedAt, setMatchingCreatedAt] = useState<string | null>(
+    null,
+  );
+  const router = useRouter();
 
   useEffect(() => {
     const checkMatching = async () => {
@@ -21,8 +30,11 @@ export default function MatchingPage() {
 
       const { data, error } = await supabase
         .from("matchings")
-        .select("id, support_request_id, supporter_id")
-        .eq("supporter_id", user.id);
+        .select(
+          "id, support_request_id, supporter_id, status, ended_at,  created_at",
+        )
+        .eq("supporter_id", user.id)
+        .eq("status", "active");
 
       if (error) {
         console.error("matching check error:", error.message);
@@ -42,6 +54,8 @@ export default function MatchingPage() {
         }
 
         setIsMatching(true);
+        setMatchingCreatedAt(data[0].created_at);
+        setMatchingId(data[0].id);
 
         const { data: matchedRequest, error: matchedRequestError } =
           await supabase
@@ -104,8 +118,9 @@ export default function MatchingPage() {
       const requestIds = requestData.map((request) => request.id);
       const { data: matchingData, error: matchingError } = await supabase
         .from("matchings")
-        .select("id, supporter_id")
-        .in("support_request_id", requestIds);
+        .select("id, supporter_id, status, ended_at, created_at")
+        .in("support_request_id", requestIds)
+        .eq("status", "active");
 
       if (matchingError) {
         console.error("matching request check error:", matchingError.message);
@@ -114,6 +129,8 @@ export default function MatchingPage() {
 
       if (matchingData && matchingData.length > 0) {
         setIsMatching(true);
+        setMatchingCreatedAt(matchingData[0].created_at);
+        setMatchingId(matchingData[0].id);
         setMatchedUserId(matchingData[0].supporter_id);
       }
       const thirtyMinutesAgo = new Date(
@@ -315,15 +332,187 @@ export default function MatchingPage() {
     turnOffSupport();
   }, [isMatching]);
 
+  const handleEndMatching = async () => {
+    if (!matchingId) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("matchings")
+      .update({
+        status: "ended",
+        ended_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", matchingId);
+
+    if (error) {
+      console.error("matching end error:", error.message);
+      return;
+    }
+
+    setIsMatching(false);
+    setIsEnded(true);
+    setIsWithinMessageGracePeriod(true);
+  };
+
+  useEffect(() => {
+    if (!isEnded) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      router.push("/");
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isEnded, router]);
+
+  useEffect(() => {
+    const checkMessageGracePeriod = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        return;
+      }
+
+      const { data: supportRequests, error: supportRequestsError } =
+        await supabase
+          .from("support_requests")
+          .select("id")
+          .eq("user_id", user.id);
+
+      if (supportRequestsError) {
+        console.error(
+          "support requests check error:",
+          supportRequestsError.message,
+        );
+        return;
+      }
+
+      const requestIds = supportRequests?.map((request) => request.id) ?? [];
+
+      const { data: endedAsSupporter, error: endedAsSupporterError } =
+        await supabase
+          .from("matchings")
+          .select("ended_at")
+          .eq("supporter_id", user.id)
+          .eq("status", "ended")
+          .order("ended_at", { ascending: false })
+          .limit(1);
+
+      if (endedAsSupporterError) {
+        console.error(
+          "ended supporter matching error:",
+          endedAsSupporterError.message,
+        );
+        return;
+      }
+
+      let endedAt = endedAsSupporter?.[0]?.ended_at ?? null;
+
+      if (!endedAt && requestIds.length > 0) {
+        const { data: endedAsRequester, error: endedAsRequesterError } =
+          await supabase
+            .from("matchings")
+            .select("ended_at")
+            .in("support_request_id", requestIds)
+            .eq("status", "ended")
+            .order("ended_at", { ascending: false })
+            .limit(1);
+
+        if (endedAsRequesterError) {
+          console.error(
+            "ended requester matching error:",
+            endedAsRequesterError.message,
+          );
+          return;
+        }
+
+        endedAt = endedAsRequester?.[0]?.ended_at ?? null;
+      }
+
+      if (!endedAt) {
+        setIsWithinMessageGracePeriod(false);
+        return;
+      }
+
+      const endedTime = new Date(endedAt).getTime();
+      const oneHour = 60 * 60 * 1000;
+      const isWithinOneHour = Date.now() - endedTime < oneHour;
+
+      setIsWithinMessageGracePeriod(isWithinOneHour);
+    };
+
+    checkMessageGracePeriod();
+  }, []);
+
+  useEffect(() => {
+    if (!isMatching || !matchingId || !matchingCreatedAt) {
+      return;
+    }
+
+    const createdTime = new Date(matchingCreatedAt).getTime();
+    const oneHour = 60 * 60 * 1000;
+    const remainingTime = createdTime + oneHour - Date.now();
+
+    const endMatchingAutomatically = async () => {
+      const { error } = await supabase
+        .from("matchings")
+        .update({
+          status: "ended",
+          ended_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", matchingId);
+
+      if (error) {
+        console.error("automatic matching end error:", error.message);
+        return;
+      }
+
+      setIsMatching(false);
+      setIsWithinMessageGracePeriod(true);
+    };
+
+    if (remainingTime <= 0) {
+      endMatchingAutomatically();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      endMatchingAutomatically();
+    }, remainingTime);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isMatching, matchingId, matchingCreatedAt]);
+
   return (
     <main>
       <HamburgerMenu />
       <h1>マッチング</h1>
 
-      {isMatching ? (
+      {isEnded ? (
+        <>
+          <p>ご利用ありがとうございました</p>
+          <p>終了後1時間はメッセージを利用できます</p>
+        </>
+      ) : isMatching ? (
         <>
           <p>マッチング中です</p>
           <p>相手: {matchedNickname}</p>
+          <button onClick={handleEndMatching}>マッチング終了</button>
+        </>
+      ) : isWithinMessageGracePeriod ? (
+        <>
+          <p>マッチングは終了しました。</p>
+          <p>終了後1時間はメッセージを利用できます。</p>
         </>
       ) : (
         <p>現在マッチングはありません</p>
