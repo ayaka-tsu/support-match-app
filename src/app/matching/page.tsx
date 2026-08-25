@@ -501,18 +501,12 @@ export default function MatchingPage() {
       {isEnded ? (
         <>
           <p>ご利用ありがとうございました</p>
-          <p>終了後1時間はメッセージを利用できます</p>
         </>
       ) : isMatching ? (
         <>
           <p>マッチング中です</p>
           <p>相手: {matchedNickname}</p>
           <button onClick={handleEndMatching}>マッチング終了</button>
-        </>
-      ) : isWithinMessageGracePeriod ? (
-        <>
-          <p>マッチングは終了しました。</p>
-          <p>終了後1時間はメッセージを利用できます。</p>
         </>
       ) : (
         <p>現在マッチングはありません</p>
