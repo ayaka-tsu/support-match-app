@@ -13,8 +13,6 @@ export default function MatchingPage() {
   const [matchedNickname, setMatchedNickname] = useState("");
   const [matchingId, setMatchingId] = useState<string | null>(null);
   const [isEnded, setIsEnded] = useState(false);
-  const [isWithinMessageGracePeriod, setIsWithinMessageGracePeriod] =
-    useState(false);
   const [matchingCreatedAt, setMatchingCreatedAt] = useState<string | null>(
     null,
   );
@@ -353,7 +351,6 @@ export default function MatchingPage() {
 
     setIsMatching(false);
     setIsEnded(true);
-    setIsWithinMessageGracePeriod(true);
   };
 
   useEffect(() => {
@@ -369,87 +366,6 @@ export default function MatchingPage() {
       clearTimeout(timer);
     };
   }, [isEnded, router]);
-
-  useEffect(() => {
-    const checkMessageGracePeriod = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        return;
-      }
-
-      const { data: supportRequests, error: supportRequestsError } =
-        await supabase
-          .from("support_requests")
-          .select("id")
-          .eq("user_id", user.id);
-
-      if (supportRequestsError) {
-        console.error(
-          "support requests check error:",
-          supportRequestsError.message,
-        );
-        return;
-      }
-
-      const requestIds = supportRequests?.map((request) => request.id) ?? [];
-
-      const { data: endedAsSupporter, error: endedAsSupporterError } =
-        await supabase
-          .from("matchings")
-          .select("ended_at")
-          .eq("supporter_id", user.id)
-          .eq("status", "ended")
-          .order("ended_at", { ascending: false })
-          .limit(1);
-
-      if (endedAsSupporterError) {
-        console.error(
-          "ended supporter matching error:",
-          endedAsSupporterError.message,
-        );
-        return;
-      }
-
-      let endedAt = endedAsSupporter?.[0]?.ended_at ?? null;
-
-      if (!endedAt && requestIds.length > 0) {
-        const { data: endedAsRequester, error: endedAsRequesterError } =
-          await supabase
-            .from("matchings")
-            .select("ended_at")
-            .in("support_request_id", requestIds)
-            .eq("status", "ended")
-            .order("ended_at", { ascending: false })
-            .limit(1);
-
-        if (endedAsRequesterError) {
-          console.error(
-            "ended requester matching error:",
-            endedAsRequesterError.message,
-          );
-          return;
-        }
-
-        endedAt = endedAsRequester?.[0]?.ended_at ?? null;
-      }
-
-      if (!endedAt) {
-        setIsWithinMessageGracePeriod(false);
-        return;
-      }
-
-      const endedTime = new Date(endedAt).getTime();
-      const oneHour = 60 * 60 * 1000;
-      const isWithinOneHour = Date.now() - endedTime < oneHour;
-
-      setIsWithinMessageGracePeriod(isWithinOneHour);
-    };
-
-    checkMessageGracePeriod();
-  }, []);
 
   useEffect(() => {
     if (!isMatching || !matchingId || !matchingCreatedAt) {
@@ -476,7 +392,6 @@ export default function MatchingPage() {
       }
 
       setIsMatching(false);
-      setIsWithinMessageGracePeriod(true);
     };
 
     if (remainingTime <= 0) {
@@ -506,6 +421,30 @@ export default function MatchingPage() {
         <>
           <p>マッチング中です</p>
           <p>相手: {matchedNickname}</p>
+          {matchingCreatedAt && (
+            <p>
+              サポート成立{" "}
+              {new Date(matchingCreatedAt).toLocaleTimeString("ja-JP", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          )}
+          {matchingCreatedAt && (
+            <p>
+              このサポート成立は
+              {new Date(
+                new Date(matchingCreatedAt).getTime() + 60 * 60 * 1000,
+              ).toLocaleTimeString("ja-JP", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+              まで有効です
+            </p>
+          )}
+          <button type="button" onClick={() => router.push("/messages")}>
+            メッセージを開く
+          </button>
           <button onClick={handleEndMatching}>マッチング終了</button>
         </>
       ) : (

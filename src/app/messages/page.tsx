@@ -19,14 +19,21 @@ export default function MessagesPage() {
     }[]
   >([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const [isActiveMatching, setIsActiveMatching] = useState(false);
   const [isWithinMessageGracePeriod, setIsWithinMessageGracePeriod] =
     useState(false);
-  const [conversationIds, setConversationIds] = useState<string[]>([]);
+  const [canSendMessage, setCanSendMessage] = useState(false);
+  const [messageAvailableUntil, setMessageAvailableUntil] = useState<
+    string | null
+  >(null);
   const [conversationNames, setConversationNames] = useState<
     { matchingId: string; nickname: string }[]
   >([]);
   const [showHistory, setShowHistory] = useState(false);
+
+  const selectedNickname =
+    conversationNames.find(
+      (conversation) => conversation.matchingId === matchingId,
+    )?.nickname ?? null;
 
   useEffect(() => {
     const getUser = async () => {
@@ -55,7 +62,6 @@ export default function MessagesPage() {
       }
 
       if (supporterMatching && supporterMatching.length > 0) {
-        setIsActiveMatching(true);
         setMatchingId(supporterMatching[0].id);
         return;
       }
@@ -91,72 +97,8 @@ export default function MessagesPage() {
       }
 
       if (requesterMatching && requesterMatching.length > 0) {
-        setIsActiveMatching(true);
         setMatchingId(requesterMatching[0].id);
         return;
-      }
-      const {
-        data: endedSupporterMatching,
-        error: endedSupporterMatchingError,
-      } = await supabase
-        .from("matchings")
-        .select("id, ended_at")
-        .eq("supporter_id", user.id)
-        .eq("status", "ended")
-        .order("ended_at", { ascending: false })
-        .limit(1);
-
-      if (endedSupporterMatchingError) {
-        console.error(
-          "ended supporter matching error:",
-          endedSupporterMatchingError.message,
-        );
-        return;
-      }
-
-      if (
-        !matchingId &&
-        endedSupporterMatching &&
-        endedSupporterMatching.length > 0
-      ) {
-        setMatchingId(endedSupporterMatching[0].id);
-
-        const endedTime = new Date(
-          `${endedSupporterMatching[0].ended_at}Z`,
-        ).getTime();
-
-        setIsWithinMessageGracePeriod(Date.now() - endedTime < 60 * 60 * 1000);
-      }
-      const {
-        data: endedRequesterMatching,
-        error: endedRequesterMatchingError,
-      } = await supabase
-        .from("matchings")
-        .select("id, ended_at")
-        .in("support_request_id", requestIds)
-        .eq("status", "ended")
-        .order("ended_at", { ascending: false })
-        .limit(1);
-
-      if (endedRequesterMatchingError) {
-        console.error(
-          "ended requester matching error:",
-          endedRequesterMatchingError.message,
-        );
-        return;
-      }
-
-      if (endedRequesterMatching && endedRequesterMatching.length > 0) {
-        if (!matchingId) {
-          setMatchingId(endedRequesterMatching[0].id);
-        }
-        const requesterEndedTime = new Date(
-          `${endedRequesterMatching[0].ended_at}Z`,
-        ).getTime();
-
-        setIsWithinMessageGracePeriod(
-          Date.now() - requesterEndedTime < 60 * 60 * 1000,
-        );
       }
     };
 
@@ -209,9 +151,6 @@ export default function MessagesPage() {
 
       const supporterMatchingIds = data?.map((matching) => matching.id) ?? [];
 
-      setConversationIds([
-        ...new Set([...supporterMatchingIds, ...requesterMatchingIds]),
-      ]);
       const allMatchingIds = [
         ...new Set([...supporterMatchingIds, ...requesterMatchingIds]),
       ];
@@ -286,6 +225,51 @@ export default function MessagesPage() {
   }, [userId]);
 
   useEffect(() => {
+    const checkCanSendMessage = async () => {
+      if (!matchingId) {
+        setCanSendMessage(false);
+        setIsWithinMessageGracePeriod(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("matchings")
+        .select("status, ended_at")
+        .eq("id", matchingId)
+        .single();
+
+      if (error) {
+        console.error("matching status error:", error.message);
+        setCanSendMessage(false);
+        return;
+      }
+
+      if (data.status === "active") {
+        setCanSendMessage(true);
+        setIsWithinMessageGracePeriod(false);
+        return;
+      }
+
+      if (data.status === "ended" && data.ended_at) {
+        const endedTime = new Date(data.ended_at).getTime();
+        const isWithinGracePeriod = Date.now() - endedTime < 60 * 60 * 1000;
+
+        const messageDeadline = new Date(endedTime + 60 * 60 * 1000);
+        setMessageAvailableUntil(messageDeadline.toISOString());
+
+        setCanSendMessage(isWithinGracePeriod);
+        setIsWithinMessageGracePeriod(isWithinGracePeriod);
+        return;
+      }
+
+      setCanSendMessage(false);
+      setIsWithinMessageGracePeriod(false);
+    };
+
+    checkCanSendMessage();
+  }, [matchingId]);
+
+  useEffect(() => {
     const getMessages = async () => {
       if (!matchingId) return;
 
@@ -307,7 +291,7 @@ export default function MessagesPage() {
   }, [matchingId]);
 
   const handleSend = async () => {
-    if (!isActiveMatching && !isWithinMessageGracePeriod) return;
+    if (!canSendMessage) return;
     if (!userId || !matchingId || !content.trim()) return;
 
     const { data, error } = await supabase
@@ -358,8 +342,18 @@ export default function MessagesPage() {
           ))}
         </div>
       )}
-      {isWithinMessageGracePeriod && (
-        <p>この相手とのメッセージは終了後1時間まで利用できます</p>
+
+      {selectedNickname && <p>{selectedNickname}</p>}
+
+      {isWithinMessageGracePeriod && messageAvailableUntil && (
+        <p>
+          この相手とのメッセージは
+          {new Date(messageAvailableUntil).toLocaleTimeString("ja-JP", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+          まで利用できます
+        </p>
       )}
 
       <div>
@@ -368,7 +362,7 @@ export default function MessagesPage() {
         ))}
       </div>
 
-      {(isActiveMatching || isWithinMessageGracePeriod) && (
+      {canSendMessage && (
         <>
           <input
             type="text"
