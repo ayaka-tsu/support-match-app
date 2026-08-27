@@ -13,6 +13,7 @@ export default function MatchingPage() {
   const [matchedNickname, setMatchedNickname] = useState("");
   const [matchingId, setMatchingId] = useState<string | null>(null);
   const [isEnded, setIsEnded] = useState(false);
+  const [isCanceled, setIsCanceled] = useState(false);
   const [matchingCreatedAt, setMatchingCreatedAt] = useState<string | null>(
     null,
   );
@@ -368,6 +369,43 @@ export default function MatchingPage() {
   }, [isEnded, router]);
 
   useEffect(() => {
+    if (!isCanceled) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      router.push("/");
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isCanceled, router]);
+
+  const handleCancelMatching = async () => {
+    if (!matchingId) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("matchings")
+      .update({
+        status: "canceled",
+        ended_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", matchingId);
+
+    if (error) {
+      console.error("matching cancel error:", error.message);
+      return;
+    }
+
+    setIsMatching(false);
+    setIsCanceled(true);
+  };
+
+  useEffect(() => {
     if (!isMatching || !matchingId || !matchingCreatedAt) {
       return;
     }
@@ -445,6 +483,11 @@ export default function MatchingPage() {
           <button type="button" onClick={() => router.push("/messages")}>
             メッセージを開く
           </button>
+
+          <button type="button" onClick={handleCancelMatching}>
+            キャンセル
+          </button>
+
           <button onClick={handleEndMatching}>マッチング終了</button>
         </>
       ) : (
