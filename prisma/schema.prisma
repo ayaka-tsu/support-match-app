@@ -11,11 +11,11 @@ model Profile {
   id                  String    @id @db.Uuid
   nickname            String
   support_available   Boolean   @default(false)
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @updatedAt
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime  @updatedAt @db.Timestamptz(6)
   latitude            Float?
   longitude           Float?
-  location_updated_at DateTime?
+  location_updated_at DateTime? @db.Timestamptz(6)
 
   @@map("profiles")
 }
@@ -33,11 +33,11 @@ model SupportRequest {
   id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id             String    @db.Uuid
   store_id            String    @db.Uuid
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @updatedAt
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime  @updatedAt @db.Timestamptz(6)
   latitude            Float?
   longitude           Float?
-  location_updated_at DateTime?
+  location_updated_at DateTime? @db.Timestamptz(6)
   matching            Matching?
   store               Store     @relation(fields: [store_id], references: [id])
 
@@ -48,10 +48,14 @@ model Matching {
   id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   support_request_id String         @unique @db.Uuid
   supporter_id       String         @db.Uuid
-  created_at         DateTime       @default(now())
-  updated_at         DateTime       @updatedAt
+  created_at         DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime       @updatedAt @db.Timestamptz(6)
   status             String         @default("active")
-  ended_at           DateTime?
+  ended_at           DateTime?      @db.Timestamptz(6)
+  canceled_by        String?        @db.Uuid
+  canceled_seen_at   DateTime?      @db.Timestamptz(6)
+  supporter_seen_at  DateTime?      @db.Timestamptz(6)
+  requester_seen_at  DateTime?      @db.Timestamptz(6)
   support_request    SupportRequest @relation(fields: [support_request_id], references: [id])
   messages           Message[]
 
@@ -59,13 +63,14 @@ model Matching {
 }
 
 model Message {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sender_id   String   @db.Uuid
-  matching_id String   @db.Uuid
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sender_id   String    @db.Uuid
+  matching_id String    @db.Uuid
   content     String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  matching    Matching @relation(fields: [matching_id], references: [id])
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @updatedAt @db.Timestamptz(6)
+  read_at     DateTime? @db.Timestamptz(6)
+  matching    Matching  @relation(fields: [matching_id], references: [id])
 
   @@map("messages")
 }

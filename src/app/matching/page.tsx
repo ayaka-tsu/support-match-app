@@ -14,6 +14,8 @@ export default function MatchingPage() {
   const [matchingId, setMatchingId] = useState<string | null>(null);
   const [isEnded, setIsEnded] = useState(false);
   const [isCanceled, setIsCanceled] = useState(false);
+  const [isCanceledByOther, setIsCanceledByOther] = useState(false);
+  const [isNewMatching, setIsNewMatching] = useState(false);
   const [matchingCreatedAt, setMatchingCreatedAt] = useState<string | null>(
     null,
   );
@@ -30,7 +32,7 @@ export default function MatchingPage() {
       const { data, error } = await supabase
         .from("matchings")
         .select(
-          "id, support_request_id, supporter_id, status, ended_at,  created_at",
+          "id, support_request_id, supporter_id, status, ended_at,  created_at, supporter_seen_at",
         )
         .eq("supporter_id", user.id)
         .eq("status", "active");
@@ -55,6 +57,10 @@ export default function MatchingPage() {
         setIsMatching(true);
         setMatchingCreatedAt(data[0].created_at);
         setMatchingId(data[0].id);
+
+        if (!data[0].supporter_seen_at) {
+          setIsNewMatching(true);
+        }
 
         const { data: matchedRequest, error: matchedRequestError } =
           await supabase
@@ -102,6 +108,33 @@ export default function MatchingPage() {
         });
       }
 
+      if (!data || data.length === 0) {
+        const { data: canceledData, error: canceledError } = await supabase
+          .from("matchings")
+          .select("id, canceled_by, ended_at, canceled_seen_at")
+          .eq("supporter_id", user.id)
+          .eq("status", "canceled")
+          .order("ended_at", { ascending: false })
+          .limit(1);
+
+        if (canceledError) {
+          console.error(
+            "canceled matching check error:",
+            canceledError.message,
+          );
+          return;
+        }
+        if (
+          canceledData &&
+          canceledData.length > 0 &&
+          canceledData[0].canceled_by !== user.id &&
+          !canceledData[0].canceled_seen_at
+        ) {
+          setMatchingId(canceledData[0].id);
+          setIsCanceledByOther(true);
+        }
+      }
+
       const { data: requestData, error: requestError } = await supabase
         .from("support_requests")
         .select("id")
@@ -117,7 +150,9 @@ export default function MatchingPage() {
       const requestIds = requestData.map((request) => request.id);
       const { data: matchingData, error: matchingError } = await supabase
         .from("matchings")
-        .select("id, supporter_id, status, ended_at, created_at")
+        .select(
+          "id, supporter_id, status, ended_at, created_at, requester_seen_at",
+        )
         .in("support_request_id", requestIds)
         .eq("status", "active");
 
@@ -131,7 +166,40 @@ export default function MatchingPage() {
         setMatchingCreatedAt(matchingData[0].created_at);
         setMatchingId(matchingData[0].id);
         setMatchedUserId(matchingData[0].supporter_id);
+        if (!matchingData[0].requester_seen_at) {
+          setIsNewMatching(true);
+        }
       }
+
+      if (!matchingData || matchingData.length === 0) {
+        console.log("requestIds:", requestIds);
+        const { data: canceledMatchingData, error: canceledMatchingError } =
+          await supabase
+            .from("matchings")
+            .select("id, canceled_by, ended_at, canceled_seen_at")
+            .in("support_request_id", requestIds)
+            .eq("status", "canceled")
+            .order("ended_at", { ascending: false })
+            .limit(1);
+        if (canceledMatchingError) {
+          console.error(
+            "canceled requester matching check error:",
+            canceledMatchingError.message,
+          );
+          return;
+        }
+
+        if (
+          canceledMatchingData &&
+          canceledMatchingData.length > 0 &&
+          canceledMatchingData[0].canceled_by !== user.id &&
+          !canceledMatchingData[0].canceled_seen_at
+        ) {
+          setMatchingId(canceledMatchingData[0].id);
+          setIsCanceledByOther(true);
+        }
+      }
+
       const thirtyMinutesAgo = new Date(
         Date.now() - 30 * 60 * 1000,
       ).toISOString();
@@ -368,22 +436,16 @@ export default function MatchingPage() {
     };
   }, [isEnded, router]);
 
-  useEffect(() => {
-    if (!isCanceled) {
+  const handleCancelMatching = async () => {
+    if (!matchingId) {
       return;
     }
 
-    const timer = setTimeout(() => {
-      router.push("/");
-    }, 3000);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [isCanceled, router]);
-
-  const handleCancelMatching = async () => {
-    if (!matchingId) {
+    if (!user) {
       return;
     }
 
@@ -391,6 +453,7 @@ export default function MatchingPage() {
       .from("matchings")
       .update({
         status: "canceled",
+        canceled_by: user.id,
         ended_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -405,13 +468,67 @@ export default function MatchingPage() {
     setIsCanceled(true);
   };
 
+  const handleCloseCanceledByOther = async () => {
+    if (!matchingId) return;
+
+    const { error } = await supabase
+      .from("matchings")
+      .update({
+        canceled_seen_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", matchingId);
+
+    if (error) {
+      console.error("canceled seen update error:", error.message);
+      return;
+    }
+    window.dispatchEvent(new Event("matching-notification-read"));
+    setIsCanceledByOther(false);
+  };
+
+  const handleCloseNewMatching = async () => {
+    if (!matchingId) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data: matchingData, error: matchingError } = await supabase
+      .from("matchings")
+      .select("supporter_id, support_request_id")
+      .eq("id", matchingId)
+      .single();
+
+    if (matchingError) {
+      console.error("matching seen check error:", matchingError.message);
+      return;
+    }
+
+    if (matchingData.supporter_id === user.id) {
+      await supabase
+        .from("matchings")
+        .update({ supporter_seen_at: new Date().toISOString() })
+        .eq("id", matchingId);
+    } else {
+      await supabase
+        .from("matchings")
+        .update({ requester_seen_at: new Date().toISOString() })
+        .eq("id", matchingId);
+    }
+    window.dispatchEvent(new Event("matching-notification-read"));
+    setIsNewMatching(false);
+  };
+
   useEffect(() => {
     if (!isMatching || !matchingId || !matchingCreatedAt) {
       return;
     }
-
     const createdTime = new Date(matchingCreatedAt).getTime();
     const oneHour = 60 * 60 * 1000;
+    const automaticEndTime = new Date(createdTime + oneHour).toISOString();
     const remainingTime = createdTime + oneHour - Date.now();
 
     const endMatchingAutomatically = async () => {
@@ -419,7 +536,7 @@ export default function MatchingPage() {
         .from("matchings")
         .update({
           status: "ended",
-          ended_at: new Date().toISOString(),
+          ended_at: automaticEndTime,
           updated_at: new Date().toISOString(),
         })
         .eq("id", matchingId);
@@ -452,9 +569,183 @@ export default function MatchingPage() {
       <h1>マッチング</h1>
 
       {isEnded ? (
+        <p>ご利用ありがとうございました</p>
+      ) : isMatching ? (
+        <>
+          <p>マッチング中です</p>
+          <p>相手: {matchedNickname}</p>
+
+          {matchingCreatedAt && (
+            <p>
+              サポート成立{" "}
+              {new Date(matchingCreatedAt).toLocaleTimeString("ja-JP", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          )}
+
+          {matchingCreatedAt && (
+            <p>
+              このサポート成立は
+              {new Date(
+                new Date(matchingCreatedAt).getTime() + 60 * 60 * 1000,
+              ).toLocaleTimeString("ja-JP", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+              まで有効です
+            </p>
+          )}
+
+          <button type="button" onClick={() => router.push("/messages")}>
+            メッセージを開く
+          </button>
+
+          <button type="button" onClick={handleCancelMatching}>
+            キャンセル
+          </button>
+
+          <button type="button" onClick={handleEndMatching}>
+            マッチング終了
+          </button>
+        </>
+      ) : (
+        <p>現在マッチングはありません</p>
+      )}
+
+      {isNewMatching && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              backgroundColor: "white",
+              padding: "32px",
+              borderRadius: "12px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleCloseNewMatching}
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "8px",
+              }}
+            >
+              ×
+            </button>
+            <p>サポートが成立しました</p>
+          </div>
+        </div>
+      )}
+
+      {isCanceled && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              backgroundColor: "white",
+              padding: "32px",
+              borderRadius: "12px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setIsCanceled(false)}
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "8px",
+              }}
+            >
+              ×
+            </button>
+            <p>キャンセルしました</p>
+          </div>
+        </div>
+      )}
+
+      {isCanceledByOther && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              backgroundColor: "white",
+              padding: "32px",
+              borderRadius: "12px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleCloseCanceledByOther}
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "8px",
+              }}
+            >
+              ×
+            </button>
+            <p>相手の方がキャンセルしました</p>
+          </div>
+        </div>
+      )}
+      {/* {isEnded ? (
         <>
           <p>ご利用ありがとうございました</p>
         </>
+      ) : isNewMatching ? (
+        <div>
+          <button type="button" onClick={handleCloseNewMatching}>
+            ×
+          </button>
+          <p>サポートが成立しました</p>
+        </div>
+      ) : isCanceled ? (
+        <div>
+          <button type="button" onClick={() => setIsCanceled(false)}>
+            ×
+          </button>
+          <p>キャンセルしました</p>
+        </div>
+      ) : isCanceledByOther ? (
+        <div>
+          <button type="button" onClick={handleCloseCanceledByOther}>
+            ×
+          </button>
+          <p>相手の方がキャンセルしました</p>
+        </div>
       ) : isMatching ? (
         <>
           <p>マッチング中です</p>
@@ -492,7 +783,7 @@ export default function MatchingPage() {
         </>
       ) : (
         <p>現在マッチングはありません</p>
-      )}
+      )} */}
     </main>
   );
 }

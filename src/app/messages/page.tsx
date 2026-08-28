@@ -26,13 +26,19 @@ export default function MessagesPage() {
     string | null
   >(null);
   const [conversationNames, setConversationNames] = useState<
-    { matchingId: string; nickname: string }[]
+    {
+      userId: string;
+      nickname: string;
+      matchingIds: string[];
+      hasUnread: boolean;
+    }[]
   >([]);
   const [showHistory, setShowHistory] = useState(false);
 
   const selectedNickname =
     conversationNames.find(
-      (conversation) => conversation.matchingId === matchingId,
+      (conversation) =>
+        matchingId && conversation.matchingIds.includes(matchingId),
     )?.nickname ?? null;
 
   useEffect(() => {
@@ -196,28 +202,72 @@ export default function MessagesPage() {
           console.error("conversation profile error:", profileError.message);
           return;
         }
-        const names =
-          matchingData?.map((matching) => {
-            const requester = supportRequestData?.find(
-              (request) => request.id === matching.support_request_id,
-            );
 
-            const otherUserId =
-              matching.supporter_id === userId
-                ? requester?.user_id
-                : matching.supporter_id;
+        const conversationMap = new Map<
+          string,
+          {
+            userId: string;
+            nickname: string;
+            matchingIds: string[];
+            hasUnread: boolean;
+          }
+        >();
 
-            const profile = profileData?.find(
-              (profile) => profile.id === otherUserId,
-            );
+        matchingData?.forEach((matching) => {
+          const requester = supportRequestData?.find(
+            (request) => request.id === matching.support_request_id,
+          );
 
-            return {
-              matchingId: matching.id,
+          const otherUserId =
+            matching.supporter_id === userId
+              ? requester?.user_id
+              : matching.supporter_id;
+
+          if (!otherUserId) return;
+
+          const profile = profileData?.find(
+            (profile) => profile.id === otherUserId,
+          );
+
+          const existingConversation = conversationMap.get(otherUserId);
+
+          if (existingConversation) {
+            existingConversation.matchingIds.push(matching.id);
+          } else {
+            conversationMap.set(otherUserId, {
+              userId: otherUserId,
               nickname: profile?.nickname ?? "名前なし",
-            };
-          }) ?? [];
+              matchingIds: [matching.id],
+              hasUnread: false,
+            });
+          }
+        });
 
-        setConversationNames(names);
+        if (allMatchingIds.length > 0) {
+          const { data: unreadMessages, error: unreadError } = await supabase
+            .from("messages")
+            .select("matching_id")
+            .in("matching_id", allMatchingIds)
+            .neq("sender_id", userId)
+            .is("read_at", null);
+
+          if (unreadError) {
+            console.error("unread message error:", unreadError.message);
+            return;
+          }
+
+          const unreadMatchingIds = new Set(
+            unreadMessages?.map((message) => message.matching_id) ?? [],
+          );
+
+          conversationMap.forEach((conversation) => {
+            conversation.hasUnread = conversation.matchingIds.some((id) =>
+              unreadMatchingIds.has(id),
+            );
+          });
+        }
+
+        setConversationNames(Array.from(conversationMap.values()));
       }
     };
 
@@ -273,12 +323,19 @@ export default function MessagesPage() {
     const getMessages = async () => {
       if (!matchingId) return;
 
+      const selectedConversation = conversationNames.find((conversation) =>
+        conversation.matchingIds.includes(matchingId),
+      );
+
+      const targetMatchingIds = selectedConversation?.matchingIds ?? [
+        matchingId,
+      ];
+
       const { data, error } = await supabase
         .from("messages")
         .select("id, sender_id, content, created_at")
-        .eq("matching_id", matchingId)
+        .in("matching_id", targetMatchingIds)
         .order("created_at", { ascending: true });
-
       if (error) {
         console.error("message fetch error:", error.message);
         return;
@@ -288,7 +345,44 @@ export default function MessagesPage() {
     };
 
     getMessages();
-  }, [matchingId]);
+  }, [matchingId, conversationNames]);
+
+  useEffect(() => {
+    if (!matchingId || !userId) return;
+
+    const selectedConversation = conversationNames.find((conversation) =>
+      conversation.matchingIds.includes(matchingId),
+    );
+
+    if (!selectedConversation || !selectedConversation.hasUnread) return;
+
+    const markMessagesAsRead = async () => {
+      const { error } = await supabase
+        .from("messages")
+        .update({
+          read_at: new Date().toISOString(),
+        })
+        .in("matching_id", selectedConversation.matchingIds)
+        .neq("sender_id", userId)
+        .is("read_at", null);
+
+      if (error) {
+        console.error("message read error:", error.message);
+        return;
+      }
+
+      setConversationNames((prev) =>
+        prev.map((conversation) =>
+          conversation.userId === selectedConversation.userId
+            ? { ...conversation, hasUnread: false }
+            : conversation,
+        ),
+      );
+      window.dispatchEvent(new Event("message-notification-read"));
+    };
+
+    markMessagesAsRead();
+  }, [matchingId, userId, conversationNames]);
 
   const handleSend = async () => {
     if (!canSendMessage) return;
@@ -322,27 +416,70 @@ export default function MessagesPage() {
       <HamburgerMenu />
       <h1>メッセージ</h1>
 
-      <button type="button" onClick={() => setShowHistory((prev) => !prev)}>
+      <button
+        type="button"
+        onClick={() => setShowHistory((prev) => !prev)}
+        style={{ position: "relative" }}
+      >
         履歴
+        {conversationNames.some((conversation) => conversation.hasUnread) && (
+          <span
+            style={{
+              display: "inline-block",
+              width: "8px",
+              height: "8px",
+              marginLeft: "6px",
+              borderRadius: "50%",
+              backgroundColor: "red",
+            }}
+          />
+        )}
       </button>
 
       {showHistory && (
         <div>
           {conversationNames.map((conversation) => (
             <button
-              key={conversation.matchingId}
+              key={conversation.userId}
               type="button"
-              onClick={() => {
-                setMatchingId(conversation.matchingId);
+              onClick={async () => {
+                setMatchingId(conversation.matchingIds[0]);
                 setShowHistory(false);
+
+                if (!userId) return;
+
+                const { error } = await supabase
+                  .from("messages")
+                  .update({
+                    read_at: new Date().toISOString(),
+                  })
+                  .in("matching_id", conversation.matchingIds)
+                  .neq("sender_id", userId)
+                  .is("read_at", null);
+
+                if (error) {
+                  console.error("message read error:", error.message);
+                }
               }}
             >
               {conversation.nickname}
+
+              {conversation.hasUnread && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "8px",
+                    height: "8px",
+                    marginLeft: "6px",
+                    borderRadius: "50%",
+                    backgroundColor: "red",
+                  }}
+                />
+              )}
             </button>
           ))}
         </div>
       )}
-
       {selectedNickname && <p>{selectedNickname}</p>}
 
       {isWithinMessageGracePeriod && messageAvailableUntil && (
@@ -357,9 +494,36 @@ export default function MessagesPage() {
       )}
 
       <div>
-        {messages.map((message) => (
-          <p key={message.id}>{message.content}</p>
-        ))}
+        {messages.map((message, index) => {
+          const currentDate = new Date(message.created_at).toLocaleDateString(
+            "ja-JP",
+          );
+
+          const previousDate =
+            index > 0
+              ? new Date(messages[index - 1].created_at).toLocaleDateString(
+                  "ja-JP",
+                )
+              : null;
+
+          const showDate = currentDate !== previousDate;
+
+          const messageTime = new Date(message.created_at).toLocaleTimeString(
+            "ja-JP",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+            },
+          );
+
+          return (
+            <div key={message.id}>
+              {showDate && <p>{currentDate}</p>}
+              <p>{message.content}</p>
+              <small>{messageTime}</small>
+            </div>
+          );
+        })}
       </div>
 
       {canSendMessage && (
