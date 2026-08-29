@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { StoreProvider } from "@/context/StoreContext";
 import "./globals.css";
 import Link from "next/link";
+import Image from "next/image";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +27,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Link href="/">アプリ名</Link>
+        <Link href="/" className="inline-flex items-center px-4 py-3">
+          <Image
+            src="/mitete-logo.png"
+            alt="mitete ロゴ"
+            width={180}
+            height={70}
+            priority
+          />
+        </Link>
         <StoreProvider>{children}</StoreProvider>
       </body>
     </html>
