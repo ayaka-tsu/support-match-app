@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import HamburgerMenu from "@/components/HamburgerMenu";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const supabase = createClient();
 
@@ -11,6 +12,7 @@ export default function MatchingPage() {
   const [isMatching, setIsMatching] = useState(false);
   const [matchedUserId, setMatchedUserId] = useState<string | null>(null);
   const [matchedNickname, setMatchedNickname] = useState("");
+  const [matchedAvatarUrl, setMatchedAvatarUrl] = useState<string | null>(null);
   const [matchingId, setMatchingId] = useState<string | null>(null);
   const [isEnded, setIsEnded] = useState(false);
   const [isCanceled, setIsCanceled] = useState(false);
@@ -355,7 +357,7 @@ export default function MatchingPage() {
     const fetchMatchedProfile = async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("nickname")
+        .select("nickname, avatar_url")
         .eq("id", matchedUserId)
         .single();
 
@@ -365,6 +367,7 @@ export default function MatchingPage() {
       }
 
       setMatchedNickname(data.nickname);
+      setMatchedAvatarUrl(data.avatar_url);
     };
     fetchMatchedProfile();
   }, [matchedUserId]);
@@ -573,8 +576,25 @@ export default function MatchingPage() {
       ) : isMatching ? (
         <>
           <p>マッチング中です</p>
-          <p>相手: {matchedNickname}</p>
+          <div className="flex items-center gap-3">
+            {matchedAvatarUrl ? (
+              <Image
+                src={matchedAvatarUrl}
+                alt={`${matchedNickname}のプロフィール画像`}
+                width={48}
+                height={48}
+                className="h-12 w-12 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#d9a3a3] text-lg font-medium text-white">
+                {matchedNickname
+                  ? matchedNickname.charAt(0).toUpperCase()
+                  : "?"}
+              </div>
+            )}
 
+            <p>{matchedNickname}</p>
+          </div>
           {matchingCreatedAt && (
             <p>
               サポート成立{" "}

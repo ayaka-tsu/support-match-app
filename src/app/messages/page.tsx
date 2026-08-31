@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 // import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import HamburgerMenu from "@/components/HamburgerMenu";
+import Image from "next/image";
 
 const supabase = createClient();
 
@@ -29,6 +30,7 @@ export default function MessagesPage() {
     {
       userId: string;
       nickname: string;
+      avatarUrl: string | null;
       matchingIds: string[];
       hasUnread: boolean;
     }[]
@@ -40,6 +42,12 @@ export default function MessagesPage() {
       (conversation) =>
         matchingId && conversation.matchingIds.includes(matchingId),
     )?.nickname ?? null;
+
+  const selectedAvatarUrl =
+    conversationNames.find(
+      (conversation) =>
+        matchingId && conversation.matchingIds.includes(matchingId),
+    )?.avatarUrl ?? null;
 
   useEffect(() => {
     const getUser = async () => {
@@ -195,7 +203,7 @@ export default function MessagesPage() {
         ];
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("id, nickname")
+          .select("id, nickname, avatar_url")
           .in("id", userIds);
 
         if (profileError) {
@@ -208,6 +216,7 @@ export default function MessagesPage() {
           {
             userId: string;
             nickname: string;
+            avatarUrl: string | null;
             matchingIds: string[];
             hasUnread: boolean;
           }
@@ -237,6 +246,7 @@ export default function MessagesPage() {
             conversationMap.set(otherUserId, {
               userId: otherUserId,
               nickname: profile?.nickname ?? "名前なし",
+              avatarUrl: profile?.avatar_url ?? null,
               matchingIds: [matching.id],
               hasUnread: false,
             });
@@ -462,25 +472,60 @@ export default function MessagesPage() {
                 }
               }}
             >
-              {conversation.nickname}
+              <div className="flex items-center gap-2">
+                {conversation.avatarUrl ? (
+                  <Image
+                    src={conversation.avatarUrl}
+                    alt={`${conversation.nickname}のプロフィール画像`}
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-sm font-medium text-white">
+                    {conversation.nickname.charAt(0).toUpperCase()}
+                  </div>
+                )}
 
-              {conversation.hasUnread && (
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: "8px",
-                    height: "8px",
-                    marginLeft: "6px",
-                    borderRadius: "50%",
-                    backgroundColor: "red",
-                  }}
-                />
-              )}
+                <span>{conversation.nickname}</span>
+
+                {conversation.hasUnread && (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: "8px",
+                      height: "8px",
+                      marginLeft: "6px",
+                      borderRadius: "50%",
+                      backgroundColor: "red",
+                    }}
+                  />
+                )}
+              </div>
             </button>
           ))}
         </div>
       )}
-      {selectedNickname && <p>{selectedNickname}</p>}
+
+      {selectedNickname && (
+        <div className="flex items-center gap-3">
+          {selectedAvatarUrl ? (
+            <Image
+              src={selectedAvatarUrl}
+              alt={`${selectedNickname}のプロフィール画像`}
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-lg font-medium text-white">
+              {selectedNickname.charAt(0).toUpperCase()}
+            </div>
+          )}
+
+          <p>{selectedNickname}</p>
+        </div>
+      )}
 
       {isWithinMessageGracePeriod && messageAvailableUntil && (
         <p>

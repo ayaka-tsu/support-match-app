@@ -16,6 +16,7 @@ model Profile {
   latitude            Float?
   longitude           Float?
   location_updated_at DateTime? @db.Timestamptz(6)
+  avatar_url          String?
 
   @@map("profiles")
 }

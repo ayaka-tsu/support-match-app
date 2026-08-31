@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import HamburgerMenu from "@/components/HamburgerMenu";
+import Image from "next/image";
 
 const supabase = createClient();
 
@@ -12,6 +13,7 @@ export default function ProfilePage() {
   const [nickname, setNickname] = useState("");
   const [supportAvailable, setSupportAvailable] = useState(false);
   const [email, setEmail] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function ProfilePage() {
       setEmail(data.user.email ?? "");
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("nickname, support_available")
+        .select("nickname, support_available, avatar_url")
         .eq("id", data.user.id)
         .maybeSingle();
 
@@ -40,6 +42,7 @@ export default function ProfilePage() {
 
       setNickname(profileData.nickname);
       setSupportAvailable(profileData.support_available);
+      setAvatarUrl(profileData.avatar_url);
     };
     getUser();
   }, [router]);
@@ -93,6 +96,19 @@ export default function ProfilePage() {
       <Link href="/profile/edit">編集する</Link>
       <h1>プロフィール</h1>
 
+      {avatarUrl ? (
+        <Image
+          src={avatarUrl}
+          alt="プロフィール画像"
+          width={96}
+          height={96}
+          className="mb-4 h-14 w-14 rounded-full object-cover"
+        />
+      ) : (
+        <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-[#d9a3a3] text-3xl font-medium text-white">
+          {nickname ? nickname.charAt(0).toUpperCase() : "?"}
+        </div>
+      )}
       <p>ニックネーム</p>
       <p>{nickname}</p>
 

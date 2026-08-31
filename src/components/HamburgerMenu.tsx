@@ -252,12 +252,13 @@ export default function HamburgerMenu() {
 
     router.push("/");
   };
-
   return (
-    <div>
+    <>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={{ position: "relative" }}
+        onClick={() => setIsOpen(true)}
+        className="fixed right-5 top-5 z-40 text-2xl text-stone-700"
+        style={{ position: "fixed" }}
+        aria-label="メニューを開く"
       >
         &#9776;
         {(hasNotification || hasMessageNotification) && (
@@ -265,7 +266,7 @@ export default function HamburgerMenu() {
             style={{
               position: "absolute",
               top: "0",
-              right: "0",
+              right: "-2px",
               width: "8px",
               height: "8px",
               borderRadius: "50%",
@@ -274,61 +275,116 @@ export default function HamburgerMenu() {
           />
         )}
       </button>
+      <div
+        className={`fixed inset-0 z-50 ${
+          isOpen ? "pointer-events-auto" : "pointer-events-none"
+        }`}
+      >
+        <div
+          className={`absolute inset-0 bg-black/70 transition-opacity duration-300 ${
+            isOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          className={`absolute right-0 top-0 h-full w-[85vw] max-w-sm bg-[#fbf5f3] p-6 shadow-xl transition-transform duration-300 ${
+            isOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="mb-8 flex justify-end">
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-2xl text-stone-600"
+              aria-label="メニューを閉じる"
+            >
+              ×
+            </button>
+          </div>
+          <nav className="flex flex-col gap-2">
+            <Link href="/concept" className="menu-item">
+              <span>コンセプト</span>
+              <span className="text-xl">›</span>
+            </Link>
 
-      {isOpen && (
-        <div>
-          <Link href="/consept">コンセプト</Link>
+            {!user && (
+              <>
+                <Link href="/signup" className="menu-item">
+                  <span>新規登録</span>
+                  <span className="text-xl">›</span>
+                </Link>
 
-          {!user && (
-            <div>
-              <Link href="/signup"> 新規登録</Link>
-              <Link href="/login"> ログイン</Link>
-            </div>
-          )}
-          {user && (
-            <div>
-              <Link href="/profile">プロフィール</Link>
-              <Link href="/stores">店舗</Link>
-              <Link href="/support-requests">サポート依頼</Link>
-              <Link href="/matching" style={{ position: "relative" }}>
-                マッチング
-                {hasNotification && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: "0",
-                      right: "-10px",
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      backgroundColor: "red",
-                    }}
-                  />
-                )}
-              </Link>
+                <Link href="/login" className="menu-item">
+                  <span>ログイン</span>
+                  <span className="text-xl">›</span>
+                </Link>
+              </>
+            )}
 
-              <Link href="/messages" style={{ position: "relative" }}>
-                メッセージ
-                {hasMessageNotification && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: "0",
-                      right: "-10px",
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      backgroundColor: "red",
-                    }}
-                  />
-                )}
-              </Link>
+            {user && (
+              <div className="flex flex-col gap-2">
+                <Link href="/profile" className="menu-item">
+                  <span>プロフィール</span>
+                  <span className="text-xl">›</span>
+                </Link>
 
-              <button onClick={handleLogout}>ログアウト</button>
-            </div>
-          )}
+                <Link href="/stores" className="menu-item">
+                  <span>店舗</span>
+                  <span className="text-xl">›</span>
+                </Link>
+
+                <Link href="/support-requests" className="menu-item">
+                  <span>サポート依頼</span>
+                  <span className="text-xl">›</span>
+                </Link>
+
+                <Link href="/matching" className="menu-item relative">
+                  <span>マッチング</span>
+                  <span className="text-xl">›</span>
+
+                  {hasNotification && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        right: "8px",
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        backgroundColor: "red",
+                      }}
+                    />
+                  )}
+                </Link>
+
+                <Link href="/messages" className="menu-item relative">
+                  <span>メッセージ</span>
+                  <span className="text-xl">›</span>
+
+                  {hasMessageNotification && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        right: "8px",
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        backgroundColor: "red",
+                      }}
+                    />
+                  )}
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="button-interaction mt-4 rounded-xl bg-[#eee5e1] px-5 py-3 text-center text-stone-600"
+                >
+                  ログアウト
+                </button>
+              </div>
+            )}
+          </nav>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }

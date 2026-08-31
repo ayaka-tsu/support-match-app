@@ -2,6 +2,7 @@ import HamburgerMenu from "@/components/HamburgerMenu";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Image from "next/image";
+import Link from "next/link";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -13,7 +14,13 @@ export default async function Home() {
   }
 
   return (
-    <main className="min-h-screen px-6 py-6">
+    <main
+      className="min-h-[calc(100dvh-94px)] px-6 py-6"
+      style={{
+        background:
+          "linear-gradient(to bottom, #f8f6f4 0%, #f8f6f4 60%, #f6eeee 78%, #efdcdc 90%, #e8caca 100%)",
+      }}
+    >
       <div className="mx-auto flex w-full max-w-md flex-col gap-8">
         <div className="flex justify-end">
           <HamburgerMenu />
@@ -42,32 +49,42 @@ export default async function Home() {
             その間に、ほんの少し自分の時間を過ごせるようにつなぐアプリです。
           </p>
         </section>
-
         <div className="flex flex-col gap-3">
-          <a
+          <Link
             href="/signup"
-            className="rounded-full bg-pink-300 px-6 py-3 text-center font-medium text-white"
+            className="button-interaction rounded-full bg-[#d9a3a3] px-6 py-3 text-center font-medium text-white"
           >
             新規登録
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/login"
-            className="rounded-full border border-pink-300 bg-white px-6 py-3 text-center font-medium text-pink-400"
+            className="button-interaction rounded-full bg-[#d9a3a3] px-6 py-3 text-center font-medium text-white"
           >
             ログイン
-          </a>
+          </Link>
         </div>
 
-        <a href="/concept" className="rounded-3xl bg-white p-5 shadow-sm">
-          <p className="font-medium text-stone-700">コンセプトを見る</p>
+        <Link
+          href="/concept"
+          className="button-interaction flex items-center justify-between rounded-3xl bg-[#f9eaea] p-5 shadow-sm"
+        >
+          <div>
+            <p className="font-medium text-stone-700">コンセプトを見る</p>
 
-          <p className="mt-1 text-sm text-stone-500">
-            「見てて」に込めた想いや使い方
-          </p>
-        </a>
+            <p className="mt-1 text-sm text-stone-500">
+              「見てて」に込めた想いや使い方
+            </p>
+          </div>
 
-        <footer className="mt-4 text-center text-xs text-stone-400">
+          <span className="ml-4 text-2xl text-rose-300">›</span>
+        </Link>
+        <footer className="mt-4 text-center text-xs text-stone-500">
+          <div className="mb-2 flex justify-center gap-4">
+            <Link href="/terms">利用規約</Link>
+            <Link href="/privacy">プライバシーポリシー</Link>
+          </div>
+
           <p>© 2026 見てて</p>
         </footer>
       </div>
