@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { toast } from "sonner";
 
 const supabase = createClient();
 
@@ -19,11 +20,11 @@ export default function LoginPage() {
     });
 
     if (error) {
-      alert("メールアドレスまたはパスワードが違います");
+      toast.error("メールアドレスまたはパスワードが違います");
       console.error(error.message);
       return;
     }
-    alert("ログインに成功しました");
+    toast.success("ログインに成功しました");
 
     const {
       data: { user },
@@ -57,6 +58,10 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+
+<Link href="/forgot-password">
+  パスワードを忘れた方
+</Link>
 
         <button type="submit">ログイン</button>
       </form>

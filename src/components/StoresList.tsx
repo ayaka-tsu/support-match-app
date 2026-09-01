@@ -106,9 +106,26 @@ export default function StoresList({ stores }: StoreListProps) {
         console.error("active request check error", error.message);
         return;
       }
-
       if (data && data.length > 0) {
+        const { data: matchingData, error: matchingError } = await supabase
+          .from("matchings")
+          .select("id")
+          .eq("support_request_id", data[0].id)
+          .maybeSingle();
+
+        if (matchingError) {
+          console.error("request matching check error", matchingError.message);
+          return;
+        }
+
+        if (matchingData) {
+          setIsRequesting(false);
+          return;
+        }
+
         setIsRequesting(true);
+      } else {
+        setIsRequesting(false);
       }
     };
     checkActiveReruest();

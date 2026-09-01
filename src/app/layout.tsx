@@ -4,6 +4,8 @@ import { StoreProvider } from "@/context/StoreContext";
 import "./globals.css";
 import Link from "next/link";
 import Image from "next/image";
+import { Toaster } from "sonner";
+import { MatchingProvider } from "@/context/MatchingContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +38,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             priority
           />
         </Link>
-        <StoreProvider>{children}</StoreProvider>
+        <StoreProvider>
+          <MatchingProvider>{children}</MatchingProvider>
+        </StoreProvider>
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );

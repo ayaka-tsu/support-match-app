@@ -40,7 +40,22 @@ export default function SupportRequestsPage() {
       }
 
       if (data && data.length > 0) {
+        const { data: matchingData, error: matchingError } = await supabase
+          .from("matchings")
+          .select("id")
+          .eq("support_request_id", data[0].id)
+          .maybeSingle();
+
+        if (matchingError) {
+          console.error("request matching check error", matchingError.message);
+          return;
+        }
+        if (matchingData) {
+          setIsRequesting(false);
+          return;
+        }
         setIsRequesting(true);
+
         const { data: storeData } = await supabase
           .from("stores")
           .select("id, name, address")
@@ -50,6 +65,8 @@ export default function SupportRequestsPage() {
         if (storeData) {
           setSelectedStore(storeData);
         }
+      } else {
+        setIsRequesting(false);
       }
     };
     checkActiveRequest();

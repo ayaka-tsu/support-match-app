@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const [supportAvailable, setSupportAvailable] = useState(false);
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function ProfilePage() {
       setNickname(profileData.nickname);
       setSupportAvailable(profileData.support_available);
       setAvatarUrl(profileData.avatar_url);
+      setIsProfileLoaded(true);
     };
     getUser();
   }, [router]);
@@ -96,16 +98,17 @@ export default function ProfilePage() {
       <Link href="/profile/edit">編集する</Link>
       <h1>プロフィール</h1>
 
-      {avatarUrl ? (
+      {!isProfileLoaded ? null : avatarUrl ? (
         <Image
           src={avatarUrl}
           alt="プロフィール画像"
           width={96}
           height={96}
+          unoptimized
           className="mb-4 h-14 w-14 rounded-full object-cover"
         />
       ) : (
-        <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-[#d9a3a3] text-3xl font-medium text-white">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#d9a3a3] text-3xl font-medium text-white">
           {nickname ? nickname.charAt(0).toUpperCase() : "?"}
         </div>
       )}
