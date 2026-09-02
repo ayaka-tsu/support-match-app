@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+} from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -11,6 +17,22 @@ type CurrentPosition = {
   longitude: number;
   capturedAt: number;
 };
+
+type MatchingContextValue = {
+  checkForMatching: () => Promise<void>;
+};
+
+const MatchingContext = createContext<MatchingContextValue | null>(null);
+
+export function useMatching() {
+  const context = useContext(MatchingContext);
+
+  if (!context) {
+    throw new Error("useMatching must be used within MatchingProvider");
+  }
+
+  return context;
+}
 
 const toRadians = (value: number) => {
   return (value * Math.PI) / 180;
@@ -349,5 +371,9 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
     };
   }, [checkForMatching, pathname]);
 
-  return <>{children}</>;
+  return (
+    <MatchingContext.Provider value={{ checkForMatching }}>
+      {children}
+    </MatchingContext.Provider>
+  );
 }

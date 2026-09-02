@@ -300,19 +300,31 @@ export default function HamburgerMenu() {
             </button>
           </div>
           <nav className="flex flex-col gap-2">
-            <Link href="/concept" className="menu-item">
+            <Link
+              href="/concept"
+              onClick={() => setIsOpen(false)}
+              className="menu-item"
+            >
               <span>コンセプト</span>
               <span className="text-xl">›</span>
             </Link>
 
             {!user && (
               <>
-                <Link href="/signup" className="menu-item">
+                <Link
+                  href="/signup"
+                  onClick={() => setIsOpen(false)}
+                  className="menu-item"
+                >
                   <span>新規登録</span>
                   <span className="text-xl">›</span>
                 </Link>
 
-                <Link href="/login" className="menu-item">
+                <Link
+                  href="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="menu-item"
+                >
                   <span>ログイン</span>
                   <span className="text-xl">›</span>
                 </Link>
@@ -321,22 +333,38 @@ export default function HamburgerMenu() {
 
             {user && (
               <div className="flex flex-col gap-2">
-                <Link href="/profile" className="menu-item">
+                <Link
+                  href="/profile"
+                  onClick={() => setIsOpen(false)}
+                  className="menu-item"
+                >
                   <span>プロフィール</span>
                   <span className="text-xl">›</span>
                 </Link>
 
-                <Link href="/stores" className="menu-item">
+                <Link
+                  href="/stores"
+                  onClick={() => setIsOpen(false)}
+                  className="menu-item"
+                >
                   <span>店舗</span>
                   <span className="text-xl">›</span>
                 </Link>
 
-                <Link href="/support-requests" className="menu-item">
+                <Link
+                  href="/support-requests"
+                  onClick={() => setIsOpen(false)}
+                  className="menu-item"
+                >
                   <span>サポート依頼</span>
                   <span className="text-xl">›</span>
                 </Link>
 
-                <Link href="/matching" className="menu-item relative">
+                <Link
+                  href="/matching"
+                  onClick={() => setIsOpen(false)}
+                  className="menu-item relative"
+                >
                   <span>マッチング</span>
                   <span className="text-xl">›</span>
 
@@ -355,7 +383,11 @@ export default function HamburgerMenu() {
                   )}
                 </Link>
 
-                <Link href="/messages" className="menu-item relative">
+                <Link
+                  href="/messages"
+                  onClick={() => setIsOpen(false)}
+                  className="menu-item relative"
+                >
                   <span>メッセージ</span>
                   <span className="text-xl">›</span>
 

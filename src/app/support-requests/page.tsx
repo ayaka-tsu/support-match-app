@@ -1,6 +1,7 @@
 "use client";
 
 import { useStore } from "@/context/StoreContext";
+import { useMatching } from "@/context/MatchingContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -10,6 +11,7 @@ const supabase = createClient();
 
 export default function SupportRequestsPage() {
   const { selectedStore, setSelectedStore } = useStore();
+  const { checkForMatching } = useMatching();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   const router = useRouter();
@@ -90,6 +92,9 @@ export default function SupportRequestsPage() {
       console.error("support request error:", error.message);
       return;
     }
+
+    await checkForMatching();
+
     setIsConfirming(false);
     setIsRequesting(true);
   };
