@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 // import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import HamburgerMenu from "@/components/HamburgerMenu";
@@ -36,6 +36,7 @@ export default function MessagesPage() {
     }[]
   >([]);
   const [showHistory, setShowHistory] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const selectedNickname =
     conversationNames.find(
@@ -117,7 +118,7 @@ export default function MessagesPage() {
     };
 
     getUser();
-  }, [matchingId]);
+  }, []);
 
   useEffect(() => {
     const getConversations = async () => {
@@ -419,35 +420,51 @@ export default function MessagesPage() {
     }
 
     setContent("");
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
   };
 
   return (
-    <main>
+    <main className="flex h-[calc(100dvh-94px)] flex-col overflow-hidden">
       <HamburgerMenu />
       <h1>メッセージ</h1>
 
-      <button
-        type="button"
-        onClick={() => setShowHistory((prev) => !prev)}
-        style={{ position: "relative" }}
-      >
-        履歴
-        {conversationNames.some((conversation) => conversation.hasUnread) && (
-          <span
-            style={{
-              display: "inline-block",
-              width: "8px",
-              height: "8px",
-              marginLeft: "6px",
-              borderRadius: "50%",
-              backgroundColor: "red",
-            }}
-          />
-        )}
-      </button>
+      {!showHistory && !matchingId && (
+        <button
+          type="button"
+          onClick={() => setShowHistory(true)}
+          style={{ position: "relative" }}
+        >
+          履歴
+          {conversationNames.some((conversation) => conversation.hasUnread) && (
+            <span
+              style={{
+                display: "inline-block",
+                width: "8px",
+                height: "8px",
+                marginLeft: "6px",
+                borderRadius: "50%",
+                backgroundColor: "red",
+              }}
+            />
+          )}
+        </button>
+      )}
 
       {showHistory && (
-        <div>
+        <div className="flex flex-col">
+          <button
+            type="button"
+            onClick={() => {
+              setShowHistory(false);
+              setMatchingId(null);
+            }}
+          >
+            ‹
+          </button>
+
           {conversationNames.map((conversation) => (
             <button
               key={conversation.userId}
@@ -507,82 +524,155 @@ export default function MessagesPage() {
         </div>
       )}
 
-      {selectedNickname && (
-        <div className="flex items-center gap-3">
-          {selectedAvatarUrl ? (
-            <Image
-              src={selectedAvatarUrl}
-              alt={`${selectedNickname}のプロフィール画像`}
-              width={32}
-              height={32}
-              className="h-8 w-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-lg font-medium text-white">
-              {selectedNickname.charAt(0).toUpperCase()}
+      {!showHistory && matchingId && (
+        <>
+          {matchingId && (
+            <button type="button" onClick={() => setShowHistory(true)}>
+              ‹
+            </button>
+          )}
+          {selectedNickname && (
+            <div className="flex items-center gap-3">
+              {selectedAvatarUrl ? (
+                <Image
+                  src={selectedAvatarUrl}
+                  alt={`${selectedNickname}のプロフィール画像`}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-lg font-medium text-white">
+                  {selectedNickname.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              <p>{selectedNickname}</p>
             </div>
           )}
 
-          <p>{selectedNickname}</p>
-        </div>
-      )}
+          {isWithinMessageGracePeriod && messageAvailableUntil && (
+            <p>
+              この相手とのメッセージは
+              {new Date(messageAvailableUntil).toLocaleTimeString("ja-JP", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+              まで利用できます
+            </p>
+          )}
 
-      {isWithinMessageGracePeriod && messageAvailableUntil && (
-        <p>
-          この相手とのメッセージは
-          {new Date(messageAvailableUntil).toLocaleTimeString("ja-JP", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-          まで利用できます
-        </p>
-      )}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {messages.map((message, index) => {
+              const currentDate = new Date(
+                message.created_at,
+              ).toLocaleDateString("ja-JP");
 
-      <div>
-        {messages.map((message, index) => {
-          const currentDate = new Date(message.created_at).toLocaleDateString(
-            "ja-JP",
-          );
+              const previousDate =
+                index > 0
+                  ? new Date(messages[index - 1].created_at).toLocaleDateString(
+                      "ja-JP",
+                    )
+                  : null;
 
-          const previousDate =
-            index > 0
-              ? new Date(messages[index - 1].created_at).toLocaleDateString(
-                  "ja-JP",
-                )
-              : null;
+              const showDate = currentDate !== previousDate;
 
-          const showDate = currentDate !== previousDate;
+              const messageTime = new Date(
+                message.created_at,
+              ).toLocaleTimeString("ja-JP", {
+                hour: "2-digit",
+                minute: "2-digit",
+              });
 
-          const messageTime = new Date(message.created_at).toLocaleTimeString(
-            "ja-JP",
-            {
-              hour: "2-digit",
-              minute: "2-digit",
-            },
-          );
+              const isOwnMessage = message.sender_id === userId;
 
-          return (
-            <div key={message.id}>
-              {showDate && <p>{currentDate}</p>}
-              <p>{message.content}</p>
-              <small>{messageTime}</small>
-            </div>
-          );
-        })}
-      </div>
+              return (
+                <div key={message.id}>
+                  {showDate && (
+                    <p className="my-4 text-center text-sm text-stone-500">
+                      {currentDate}
+                    </p>
+                  )}
 
-      {canSendMessage && (
-        <>
-          <input
-            type="text"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="メッセージを入力"
-          />
+                  <div
+                    className={`mb-3 flex ${
+                      isOwnMessage ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    {!isOwnMessage && (
+                      <div className="mr-2 flex items-start gap-2">
+                        {selectedAvatarUrl ? (
+                          <Image
+                            src={selectedAvatarUrl}
+                            alt={`${selectedNickname ?? "相手"}のプロフィール画像`}
+                            width={32}
+                            height={32}
+                            className="h-8 w-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#d9a3a3] text-sm font-medium text-white">
+                            {selectedNickname?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
 
-          <button type="button" onClick={handleSend}>
-            送信
-          </button>
+                        <div>
+                          {selectedNickname && (
+                            <p className="mb-1 text-xs text-stone-500">
+                              {selectedNickname}
+                            </p>
+                          )}
+
+                          <div className="max-w-xs break-words rounded-2xl bg-stone-100 px-4 py-2">
+                            <p className="whitespace-pre-wrap">
+                              {message.content}
+                            </p>
+                          </div>
+
+                          <small className="text-stone-400">
+                            {messageTime}
+                          </small>
+                        </div>
+                      </div>
+                    )}
+
+                    {isOwnMessage && (
+                      <div className="flex max-w-[70vw] flex-col items-end">
+                        <div className="max-w-xs break-words rounded-2xl bg-[#eee5e1] px-4 py-2">
+                          <p className="whitespace-pre-wrap">
+                            {message.content}
+                          </p>
+                        </div>
+
+                        <small className="text-stone-400">{messageTime}</small>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {canSendMessage && (
+            <>
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => {
+                  setContent(e.target.value);
+
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                }}
+                placeholder="メッセージを入力"
+                rows={1}
+                className="max-h-[120px] resize-none overflow-y-auto"
+              />
+
+              <button type="button" onClick={handleSend}>
+                送信
+              </button>
+            </>
+          )}
         </>
       )}
     </main>
