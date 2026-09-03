@@ -42,30 +42,70 @@ export default function LoginPage() {
   };
 
   return (
-    <main>
-      <h1>ログイン</h1>
-      <form onSubmit={handleLogin}>
-        <input
-          type="email"
-          placeholder="メールアドレス"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+    <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+      <div className="mx-auto w-full max-w-md">
+        <div className="flex justify-center">
+          <h1 className="page-title">ログイン</h1>
+        </div>
 
-        <input
-          type="password"
-          placeholder="パスワード"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <form
+          onSubmit={handleLogin}
+          className="mx-auto mt-8 w-full max-w-md space-y-5"
+        >
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              メールアドレス
+            </label>
 
-<Link href="/forgot-password">
-  パスワードを忘れた方
-</Link>
+            <input
+              type="email"
+              placeholder="example@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3"
+            />
+          </div>
 
-        <button type="submit">ログイン</button>
-      </form>
-      <Link href="/signup">新規登録はこちら</Link>
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              パスワード
+            </label>
+
+            <input
+              type="password"
+              placeholder="パスワード"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3"
+            />
+
+            <div className="mt-2 text-right">
+              <Link
+                href="/forgot-password"
+                className="text-xs text-[#a97d7d] underline underline-offset-4"
+              >
+                パスワードを忘れた方はこちら
+              </Link>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full rounded-xl bg-[#d9a3a3] px-4 py-2.5 font-medium text-white"
+          >
+            ログイン
+          </button>
+
+          <div className="text-center">
+            <Link
+              href="/signup"
+              className="text-sm text-[#a97d7d] underline underline-offset-4"
+            >
+              新規登録はこちら
+            </Link>
+          </div>
+        </form>
+      </div>
     </main>
   );
 }

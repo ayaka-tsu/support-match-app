@@ -36,29 +36,64 @@ export default function SignupPage() {
   };
 
   return (
-    <main>
-      <h1>新規登録</h1>
-      <form onSubmit={handleSignup}>
-        <label>メールアドレス</label>
-        <input
-          type="email"
-          placeholder="example@email.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+    <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+      <div className="mx-auto w-full max-w-md">
+        <div className="flex justify-center">
+          <h1 className="page-title">新規登録</h1>
+        </div>
+        <form
+          onSubmit={handleSignup}
+          className="mx-auto mt-8 w-full max-w-md space-y-5"
+        >
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              メールアドレス
+            </label>
 
-        <label>パスワード</label>
-        <input
-          type="password"
-          placeholder="パスワード"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+            <input
+              type="email"
+              placeholder="example@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3"
+            />
+          </div>
 
-        <p>8文字以上で入力してください</p>
-        <button type="submit">登録</button>
-      </form>
-      <Link href="/login">登録済の方はこちら</Link>
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              パスワード
+            </label>
+
+            <input
+              type="password"
+              placeholder="パスワード"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3"
+            />
+
+            <p className="mt-1.5 text-xs text-stone-500">
+              8文字以上で入力してください
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full rounded-xl bg-[#d9a3a3] px-4 py-2.5 font-medium text-white"
+          >
+            登録
+          </button>
+
+          <div className="text-center">
+            <Link
+              href="/login"
+              className="text-sm text-[#a97d7d] underline underline-offset-4"
+            >
+              登録済みの方はこちら
+            </Link>
+          </div>
+        </form>
+      </div>
     </main>
   );
 }

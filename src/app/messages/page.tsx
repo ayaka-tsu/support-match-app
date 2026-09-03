@@ -427,112 +427,126 @@ export default function MessagesPage() {
   };
 
   return (
-    <main className="flex h-[calc(100dvh-94px)] flex-col overflow-hidden">
+    <main className="page-background flex h-[calc(100dvh-94px)] flex-col overflow-hidden">
       <HamburgerMenu />
-      <h1>メッセージ</h1>
-
+      <div className="mx-auto w-full max-w-4xl px-6">
+        <h1 className="page-title">メッセージ</h1>
+      </div>
       {!showHistory && !matchingId && (
-        <button
-          type="button"
-          onClick={() => setShowHistory(true)}
-          style={{ position: "relative" }}
-        >
-          履歴
-          {conversationNames.some((conversation) => conversation.hasUnread) && (
-            <span
-              style={{
-                display: "inline-block",
-                width: "8px",
-                height: "8px",
-                marginLeft: "6px",
-                borderRadius: "50%",
-                backgroundColor: "red",
-              }}
-            />
-          )}
-        </button>
-      )}
-
-      {showHistory && (
-        <div className="flex flex-col">
+        <div className="mx-auto w-full max-w-4xl px-6 pt-6">
           <button
             type="button"
-            onClick={() => {
-              setShowHistory(false);
-              setMatchingId(null);
-            }}
+            onClick={() => setShowHistory(true)}
+            className="flex w-full max-w-[240px] items-center justify-between rounded-full bg-[#d9a3a3] px-4 py-1.5 text-sm font-medium text-white"
           >
-            ‹
+            <span className="flex items-center">
+              メッセージ一覧
+              {conversationNames.some(
+                (conversation) => conversation.hasUnread,
+              ) && <span className="ml-2 h-2 w-2 rounded-full bg-[#c96f6f]" />}
+            </span>
+
+            <span className="text-xl">›</span>
           </button>
-
-          {conversationNames.map((conversation) => (
+        </div>
+      )}
+      {showHistory && (
+        <div className="mx-auto min-h-0 w-full max-w-4xl flex-1 overflow-y-auto px-6 py-2">
+          <div className="flex items-start gap-3">
             <button
-              key={conversation.userId}
               type="button"
-              onClick={async () => {
-                setMatchingId(conversation.matchingIds[0]);
+              onClick={() => {
                 setShowHistory(false);
-
-                if (!userId) return;
-
-                const { error } = await supabase
-                  .from("messages")
-                  .update({
-                    read_at: new Date().toISOString(),
-                  })
-                  .in("matching_id", conversation.matchingIds)
-                  .neq("sender_id", userId)
-                  .is("read_at", null);
-
-                if (error) {
-                  console.error("message read error:", error.message);
-                }
+                setMatchingId(null);
               }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center text-[#c98f98]"
+              aria-label="メッセージ画面に戻る"
             >
-              <div className="flex items-center gap-2">
-                {conversation.avatarUrl ? (
-                  <Image
-                    src={conversation.avatarUrl}
-                    alt={`${conversation.nickname}のプロフィール画像`}
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-sm font-medium text-white">
-                    {conversation.nickname.charAt(0).toUpperCase()}
-                  </div>
-                )}
-
-                <span>{conversation.nickname}</span>
-
-                {conversation.hasUnread && (
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: "8px",
-                      height: "8px",
-                      marginLeft: "6px",
-                      borderRadius: "50%",
-                      backgroundColor: "red",
-                    }}
-                  />
-                )}
-              </div>
+              <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true">
+                <path
+                  d="M15 5L8 12L15 19"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
-          ))}
+            <div className="flex flex-col gap-3">
+              {conversationNames.map((conversation) => (
+                <button
+                  key={conversation.userId}
+                  type="button"
+                  className="w-fit text-left"
+                  onClick={async () => {
+                    setMatchingId(conversation.matchingIds[0]);
+                    setShowHistory(false);
+
+                    if (!userId) return;
+
+                    const { error } = await supabase
+                      .from("messages")
+                      .update({
+                        read_at: new Date().toISOString(),
+                      })
+                      .in("matching_id", conversation.matchingIds)
+                      .neq("sender_id", userId)
+                      .is("read_at", null);
+
+                    if (error) {
+                      console.error("message read error:", error.message);
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    {conversation.avatarUrl ? (
+                      <Image
+                        src={conversation.avatarUrl}
+                        alt={`${conversation.nickname}のプロフィール画像`}
+                        width={32}
+                        height={32}
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-sm font-medium text-white">
+                        {conversation.nickname.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+
+                    <span>{conversation.nickname}</span>
+                    {conversation.hasUnread && (
+                      <span className="ml-1.5 h-2 w-2 rounded-full bg-[#c96f6f]" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
       {!showHistory && matchingId && (
         <>
-          {matchingId && (
-            <button type="button" onClick={() => setShowHistory(true)}>
-              ‹
-            </button>
-          )}
           {selectedNickname && (
-            <div className="flex items-center gap-3">
+            <div className="mx-auto flex w-full max-w-4xl items-center gap-3 px-6 py-2">
+              <button
+                type="button"
+                onClick={() => setShowHistory(true)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center text-[#c98f98]"
+                aria-label="履歴一覧に戻る"
+              >
+                <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true">
+                  <path
+                    d="M15 5L8 12L15 19"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
               {selectedAvatarUrl ? (
                 <Image
                   src={selectedAvatarUrl}
@@ -542,87 +556,106 @@ export default function MessagesPage() {
                   className="h-8 w-8 rounded-full object-cover"
                 />
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-lg font-medium text-white">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#d9a3a3] text-lg font-medium text-white">
                   {selectedNickname.charAt(0).toUpperCase()}
                 </div>
               )}
 
-              <p>{selectedNickname}</p>
+              <p className="text-stone-600">{selectedNickname}</p>
             </div>
           )}
-
           {isWithinMessageGracePeriod && messageAvailableUntil && (
-            <p>
-              この相手とのメッセージは
-              {new Date(messageAvailableUntil).toLocaleTimeString("ja-JP", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-              まで利用できます
-            </p>
+            <div className="mx-auto w-full max-w-4xl px-6">
+              <p className="mt-1 text-xs leading-5 text-stone-500">
+                この相手とのメッセージは
+                <br />
+                {new Date(messageAvailableUntil).toLocaleTimeString("ja-JP", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                まで利用できます
+              </p>
+            </div>
           )}
-
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {messages.map((message, index) => {
-              const currentDate = new Date(
-                message.created_at,
-              ).toLocaleDateString("ja-JP");
+            <div className="mx-auto w-full max-w-4xl px-6">
+              {messages.map((message, index) => {
+                const currentDate = new Date(
+                  message.created_at,
+                ).toLocaleDateString("ja-JP");
 
-              const previousDate =
-                index > 0
-                  ? new Date(messages[index - 1].created_at).toLocaleDateString(
-                      "ja-JP",
-                    )
-                  : null;
+                const previousDate =
+                  index > 0
+                    ? new Date(
+                        messages[index - 1].created_at,
+                      ).toLocaleDateString("ja-JP")
+                    : null;
 
-              const showDate = currentDate !== previousDate;
+                const showDate = currentDate !== previousDate;
 
-              const messageTime = new Date(
-                message.created_at,
-              ).toLocaleTimeString("ja-JP", {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
+                const messageTime = new Date(
+                  message.created_at,
+                ).toLocaleTimeString("ja-JP", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
 
-              const isOwnMessage = message.sender_id === userId;
+                const isOwnMessage = message.sender_id === userId;
 
-              return (
-                <div key={message.id}>
-                  {showDate && (
-                    <p className="my-4 text-center text-sm text-stone-500">
-                      {currentDate}
-                    </p>
-                  )}
+                return (
+                  <div key={message.id}>
+                    {showDate && (
+                      <p className="my-4 text-center text-sm text-stone-500">
+                        {currentDate}
+                      </p>
+                    )}
 
-                  <div
-                    className={`mb-3 flex ${
-                      isOwnMessage ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {!isOwnMessage && (
-                      <div className="mr-2 flex items-start gap-2">
-                        {selectedAvatarUrl ? (
-                          <Image
-                            src={selectedAvatarUrl}
-                            alt={`${selectedNickname ?? "相手"}のプロフィール画像`}
-                            width={32}
-                            height={32}
-                            className="h-8 w-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#d9a3a3] text-sm font-medium text-white">
-                            {selectedNickname?.charAt(0).toUpperCase()}
+                    <div
+                      className={`mb-3 flex ${
+                        isOwnMessage ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      {!isOwnMessage && (
+                        <div className="mr-2 flex items-start gap-2">
+                          <div className="flex shrink-0 flex-col items-center">
+                            {selectedAvatarUrl ? (
+                              <Image
+                                src={selectedAvatarUrl}
+                                alt={`${selectedNickname ?? "相手"}のプロフィール画像`}
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-sm font-medium text-white">
+                                {selectedNickname?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+
+                            {selectedNickname && (
+                              <p className="mt-1 max-w-14 truncate text-[10px] text-stone-500">
+                                {selectedNickname}
+                              </p>
+                            )}
                           </div>
-                        )}
 
-                        <div>
-                          {selectedNickname && (
-                            <p className="mb-1 text-xs text-stone-500">
-                              {selectedNickname}
-                            </p>
-                          )}
+                          <div>
+                            <div className="max-w-xs break-words rounded-2xl bg-[#ead6d2] px-4 py-2">
+                              <p className="whitespace-pre-wrap">
+                                {message.content}
+                              </p>
+                            </div>
 
-                          <div className="max-w-xs break-words rounded-2xl bg-stone-100 px-4 py-2">
+                            <small className="text-stone-400">
+                              {messageTime}
+                            </small>
+                          </div>
+                        </div>
+                      )}
+
+                      {isOwnMessage && (
+                        <div className="flex max-w-[70vw] flex-col items-end">
+                          <div className="max-w-xs break-words rounded-2xl bg-[#d4c2bb] px-4 py-2">
                             <p className="whitespace-pre-wrap">
                               {message.content}
                             </p>
@@ -632,28 +665,16 @@ export default function MessagesPage() {
                             {messageTime}
                           </small>
                         </div>
-                      </div>
-                    )}
-
-                    {isOwnMessage && (
-                      <div className="flex max-w-[70vw] flex-col items-end">
-                        <div className="max-w-xs break-words rounded-2xl bg-[#eee5e1] px-4 py-2">
-                          <p className="whitespace-pre-wrap">
-                            {message.content}
-                          </p>
-                        </div>
-
-                        <small className="text-stone-400">{messageTime}</small>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           {canSendMessage && (
-            <>
+            <div className="mx-auto flex w-full max-w-2xl items-end gap-2 px-4 py-3">
               <textarea
                 ref={textareaRef}
                 value={content}
@@ -665,13 +686,17 @@ export default function MessagesPage() {
                 }}
                 placeholder="メッセージを入力"
                 rows={1}
-                className="max-h-[120px] resize-none overflow-y-auto"
+                className="min-h-10 max-h-[120px] flex-1 resize-none overflow-y-auto rounded-xl border border-stone-300 bg-white px-3 py-2"
               />
 
-              <button type="button" onClick={handleSend}>
+              <button
+                type="button"
+                onClick={handleSend}
+                className="shrink-0 rounded-xl bg-[#d9a3a3] px-4 py-2 font-medium text-white"
+              >
                 送信
               </button>
-            </>
+            </div>
           )}
         </>
       )}

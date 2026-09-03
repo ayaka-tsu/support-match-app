@@ -256,23 +256,14 @@ export default function HamburgerMenu() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed right-5 top-5 z-40 text-2xl text-stone-700"
+        className="fixed right-5 top-5 z-40 flex h-8 w-8 flex-col items-end justify-center gap-1.5"
         style={{ position: "fixed" }}
         aria-label="メニューを開く"
       >
-        &#9776;
+        <span className="h-0.5 w-6 rounded-full bg-[#b99191]" />
+        <span className="h-0.5 w-4 rounded-full bg-[#b99191]" />
         {(hasNotification || hasMessageNotification) && (
-          <span
-            style={{
-              position: "absolute",
-              top: "0",
-              right: "-2px",
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              backgroundColor: "red",
-            }}
-          />
+          <span className="absolute right-[-2px] top-0 h-2 w-2 rounded-full bg-[#c96f6f]" />
         )}
       </button>
       <div
@@ -363,47 +354,31 @@ export default function HamburgerMenu() {
                 <Link
                   href="/matching"
                   onClick={() => setIsOpen(false)}
-                  className="menu-item relative"
+                  className="menu-item"
                 >
-                  <span>マッチング</span>
-                  <span className="text-xl">›</span>
+                  <span className="flex items-center gap-2">
+                    マッチング
+                    {hasNotification && (
+                      <span className="h-2 w-2 rounded-full bg-[#c96f6f]" />
+                    )}
+                  </span>
 
-                  {hasNotification && (
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: "8px",
-                        right: "8px",
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "50%",
-                        backgroundColor: "red",
-                      }}
-                    />
-                  )}
+                  <span className="text-xl">›</span>
                 </Link>
 
                 <Link
                   href="/messages"
                   onClick={() => setIsOpen(false)}
-                  className="menu-item relative"
+                  className="menu-item"
                 >
-                  <span>メッセージ</span>
-                  <span className="text-xl">›</span>
+                  <span className="flex items-center gap-2">
+                    メッセージ
+                    {hasMessageNotification && (
+                      <span className="h-2 w-2 rounded-full bg-[#c96f6f]" />
+                    )}
+                  </span>
 
-                  {hasMessageNotification && (
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: "8px",
-                        right: "8px",
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "50%",
-                        backgroundColor: "red",
-                      }}
-                    />
-                  )}
+                  <span className="text-xl">›</span>
                 </Link>
 
                 <button

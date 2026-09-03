@@ -14,13 +14,7 @@ export default async function Home() {
   }
 
   return (
-    <main
-      className="min-h-[calc(100dvh-94px)] px-6 py-6"
-      style={{
-        background:
-          "linear-gradient(to bottom, #f8f6f4 0%, #f8f6f4 60%, #f6eeee 78%, #efdcdc 90%, #e8caca 100%)",
-      }}
-    >
+    <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
       <div className="mx-auto flex w-full max-w-md flex-col gap-8">
         <div className="flex justify-end">
           <HamburgerMenu />
