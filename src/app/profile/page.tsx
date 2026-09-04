@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import HamburgerMenu from "@/components/HamburgerMenu";
 import Image from "next/image";
+import SupportAvailableToggle from "@/components/SupportAvailableToggle";
 
 const supabase = createClient();
 
@@ -15,6 +16,7 @@ export default function ProfilePage() {
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+  const [userId, setUserId] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -25,6 +27,8 @@ export default function ProfilePage() {
         router.push("/login");
         return;
       }
+
+      setUserId(data.user.id);
       setEmail(data.user.email ?? "");
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -49,81 +53,58 @@ export default function ProfilePage() {
     getUser();
   }, [router]);
 
-  const updateSupportAvailable = async (checked: boolean) => {
-    setSupportAvailable(checked);
-
-    const { data, error: useError } = await supabase.auth.getUser();
-
-    if (useError) {
-      console.error(useError.message);
-      return;
-    }
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ support_available: checked })
-      .eq("id", data.user.id);
-
-    if (error) {
-      console.error(error.message);
-    }
-  };
-
-  //   const handleSaveProfile = async () => {
-  //     const { data, error: useError } = await supabase.auth.getUser();
-  //     if (useError) {
-  //       console.error(useError.message);
-  //       return;
-  //     }
-
-  //     const { error } = await supabase.from("profiles").upsert({
-  //       id: data.user.id,
-  //       nickname: nickname,
-  //       support_available: supportAvailable,
-  //       updated_at: new Date().toISOString(),
-  //     });
-
-  //     if (error) {
-  //       console.error(error.message);
-  //       return;
-  //     }
-
-  //     alert("プロフィールを保存しました");
-  //   };
-
   return (
-    <main>
+    <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
       <HamburgerMenu />
 
-      <Link href="/profile/edit">編集する</Link>
-      <h1>プロフィール</h1>
+      <div className="mx-auto w-full max-w-2xl">
+        <h1 className="page-title">プロフィール</h1>
 
-      {!isProfileLoaded ? null : avatarUrl ? (
-        <Image
-          src={avatarUrl}
-          alt="プロフィール画像"
-          width={96}
-          height={96}
-          unoptimized
-          className="mb-4 h-14 w-14 rounded-full object-cover"
-        />
-      ) : (
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#d9a3a3] text-3xl font-medium text-white">
-          {nickname ? nickname.charAt(0).toUpperCase() : "?"}
+        <div className="mt-4 text-right">
+          <Link
+            href="/profile/edit"
+            className="text-sm text-[#a97d7d] underline underline-offset-4"
+          >
+            編集する
+          </Link>
         </div>
-      )}
-      <p>ニックネーム</p>
-      <p>{nickname}</p>
+        {!isProfileLoaded ? null : avatarUrl ? (
+          <Image
+            src={avatarUrl}
+            alt="プロフィール画像"
+            width={96}
+            height={96}
+            unoptimized
+            className="mx-auto mt-6 mb-4 h-20 w-20 rounded-full object-cover"
+          />
+        ) : (
+          <div className="mx-auto mt-6 mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#d9a3a3] text-3xl font-medium text-white">
+            {nickname ? nickname.charAt(0).toUpperCase() : "?"}
+          </div>
+        )}
+        <div className="mx-auto mt-6 w-full max-w-sm rounded-2xl bg-[#f9eaea] px-5 py-5">
+          <div>
+            <p className="text-xs text-stone-500">ニックネーム</p>
+            <p className="mt-1 font-medium text-stone-700">{nickname}</p>
+          </div>
 
-      <p>メールアドレス</p>
-      <p>{email}</p>
+          <div className="mt-5">
+            <p className="text-xs text-stone-500">メールアドレス</p>
+            <p className="mt-1 text-sm text-stone-700">{email}</p>
+          </div>
 
-      <p>サポート可否</p>
-      <input
-        type="checkbox"
-        checked={supportAvailable}
-        onChange={(e) => updateSupportAvailable(e.target.checked)}
-      />
+          {userId && (
+            <div className="mt-5 flex items-center justify-between border-t border-[#ead6d6] pt-4">
+              <span className="text-sm text-stone-600">サポート</span>
+
+              <SupportAvailableToggle
+                userId={userId}
+                initialSupportAvailable={supportAvailable}
+              />
+            </div>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

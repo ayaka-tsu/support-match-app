@@ -26,8 +26,12 @@ export default function StoresList({ stores }: StoreListProps) {
   const [addStoreError, setAddStoreError] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
+  const [requestMessageStoreId, setRequestMessageStoreId] = useState<
+    string | null
+  >(null);
   const [searchType, setSearchType] = useState<"name" | "address">("name");
   const [isMatching, setIsMatching] = useState(false);
+  const [isCheckingRequest, setIsCheckingRequest] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -100,6 +104,7 @@ export default function StoresList({ stores }: StoreListProps) {
         .select("id")
         .eq("user_id", user.id)
         .gte("created_at", thirtyMinutesAgo)
+        .order("created_at", { ascending: false })
         .limit(1);
 
       if (error) {
@@ -128,7 +133,7 @@ export default function StoresList({ stores }: StoreListProps) {
         setIsRequesting(false);
       }
     };
-    checkActiveReruest();
+    checkActiveReruest().finally(() => setIsCheckingRequest(false));
   }, []);
 
   const handleSelectStore = () => {
@@ -136,8 +141,10 @@ export default function StoresList({ stores }: StoreListProps) {
     router.push(`/support-requests?storeId=${selectedStore.id}`);
   };
   const handleAddStore = async () => {
-    if (!newStoreName.trim()) return;
-
+    if (!newStoreName.trim()) {
+      setAddStoreError("店舗名を入力してください");
+      return;
+    }
     const duplicateStore = stores.find(
       (store) => normalizeText(store.name) === normalizeText(newStoreName),
     );
@@ -173,42 +180,137 @@ export default function StoresList({ stores }: StoreListProps) {
     return normalizeText(target).includes(normalizeText(search));
   });
 
-  return (
-    <div>
-      {requestMessage && <p>{requestMessage}</p>}
-      <button onClick={() => setSearchType("name")}>店舗名で検索</button>
+  if (isCheckingRequest) {
+    return null;
+  }
 
-      <button onClick={() => setSearchType("address")}>住所で検索</button>
+  return (
+    <div className="w-full">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setSearchType("name")}
+          className={`rounded-full px-4 py-2 text-sm ${
+            searchType === "name"
+              ? "bg-[#d9a3a3] text-white"
+              : "bg-[#f3e6e3] text-stone-600"
+          }`}
+        >
+          店舗名
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSearchType("address")}
+          className={`rounded-full px-4 py-2 text-sm ${
+            searchType === "address"
+              ? "bg-[#d9a3a3] text-white"
+              : "bg-[#f3e6e3] text-stone-600"
+          }`}
+        >
+          住所
+        </button>
+      </div>
+
       <input
         type="text"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
+        placeholder={searchType === "name" ? "店舗名で検索" : "住所で検索"}
+        className="mt-3 w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3"
       />
 
-      {filteredStores.map((store) => (
-        <div key={store.id}>
-          {store.name}
-          {store.address && <p>{store.address}</p>}
-          <button
-            onClick={() => {
-              if (isRequesting || isMatching) {
-                setRequestMessage(
-                  isMatching ? "現在マッチングです" : "現在サポート依頼中です",
-                );
-                return;
-              }
-              setSelectedStore(store);
-            }}
-          >
-            選択
-          </button>
-        </div>
-      ))}
+      <div className="mt-6 flex flex-col gap-3">
+        {filteredStores.map((store) => {
+          const isSelected = selectedStore?.id === store.id;
 
-      <button onClick={() => setIsAddingStore(true)}>店舗を追加</button>
+          return (
+            <div
+              key={store.id}
+              className={`rounded-2xl px-4 py-4 ${
+                isSelected ? "bg-[#f3e6e3]" : "bg-white/70"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-medium text-stone-700">{store.name}</p>
+
+                  {store.address && (
+                    <p className="mt-1 text-sm leading-5 text-stone-500">
+                      {store.address}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isRequesting || isMatching) {
+                      setRequestMessage(
+                        isMatching
+                          ? "現在マッチングです"
+                          : "現在サポート依頼中です",
+                      );
+                      setRequestMessageStoreId(store.id);
+                      return;
+                    }
+
+                    setSelectedStore(store);
+                  }}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${
+                    isSelected
+                      ? "bg-[#c98f98] text-white"
+                      : "bg-[#d9a3a3] text-white"
+                  }`}
+                >
+                  {isSelected ? "選択中" : "選択"}
+                </button>
+              </div>
+
+              {requestMessageStoreId === store.id && requestMessage && (
+                <p className="mt-2 text-sm text-[#c96f6f]">{requestMessage}</p>
+              )}
+
+              {isSelected && !isRequesting && !isCheckingRequest && (
+                <div className="mt-4 border-t border-[#e5cccc] pt-4">
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={handleSelectStore}
+                      className="flex-1 rounded-full bg-[#d9a3a3] px-5 py-3 font-medium text-white"
+                    >
+                      サポート依頼へ進む
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStore(null)}
+                      className="rounded-full bg-stone-200 px-5 py-3 text-stone-600"
+                    >
+                      選び直す
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 text-center">
+        <button
+          type="button"
+          onClick={() => setIsAddingStore(true)}
+          className="text-sm text-[#a97d7d] underline underline-offset-4"
+        >
+          店舗が見つからない場合はこちら
+        </button>
+      </div>
 
       {isAddingStore && (
-        <div>
+        <div className="mt-5 rounded-2xl bg-[#f9eaea] p-5">
+          <p className="font-medium text-stone-700">店舗を追加</p>
+
           <input
             type="text"
             value={newStoreName}
@@ -217,6 +319,7 @@ export default function StoresList({ stores }: StoreListProps) {
               setAddStoreError("");
             }}
             placeholder="店舗名"
+            className="mt-4 w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3"
           />
 
           <input
@@ -224,20 +327,35 @@ export default function StoresList({ stores }: StoreListProps) {
             value={newStoreAddress}
             onChange={(e) => setNewStoreAddress(e.target.value)}
             placeholder="店舗住所"
+            className="mt-3 w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3"
           />
 
-          <button onClick={handleAddStore}>この店舗を選択する</button>
-          <button onClick={() => setIsAddingStore(false)}>閉じる</button>
-          {addStoreError && <p>{addStoreError}</p>}
-        </div>
-      )}
+          {addStoreError && (
+            <p className="mt-2 text-sm text-[#c96f6f]">{addStoreError}</p>
+          )}
 
-      {selectedStore && !isRequesting && (
-        <div>
-          <p>選択中 : {selectedStore.name}</p>
+          <div className="mt-4 flex gap-3">
+            <button
+              type="button"
+              onClick={handleAddStore}
+              className="flex-1 rounded-full bg-[#d9a3a3] px-4 py-2.5 font-medium text-white"
+            >
+              この店舗を選択する
+            </button>
 
-          <button onClick={handleSelectStore}>サポート依頼へ進む</button>
-          <button onClick={() => setSelectedStore(null)}>選び直す</button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddingStore(false);
+                setAddStoreError("");
+                setNewStoreName("");
+                setNewStoreAddress("");
+              }}
+              className="rounded-full bg-stone-200 px-4 py-2.5 text-stone-600"
+            >
+              閉じる
+            </button>
+          </div>
         </div>
       )}
     </div>

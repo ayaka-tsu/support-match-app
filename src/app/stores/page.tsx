@@ -11,10 +11,16 @@ export default async function StoresPage() {
     console.error("stores error:", error.message);
   }
   return (
-    <main>
+    <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
       <HamburgerMenu />
-      <h1>店舗選択</h1>
-      <StoresList stores={stores ?? []} />
+
+      <div className="mx-auto w-full max-w-2xl">
+        <h1 className="page-title">店舗</h1>
+
+        <div className="mt-6">
+          <StoresList stores={stores ?? []} />
+        </div>
+      </div>
     </main>
   );
 }

@@ -233,44 +233,43 @@ export default function EditProfilePage() {
 
     router.push("/profile");
   };
-
   return (
-    <main>
+    <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
       <HamburgerMenu />
 
-      <h1>プロフィール編集</h1>
+      <div className="mx-auto w-full max-w-md">
+        <h1 className="page-title">プロフィール編集</h1>
 
-      <>
-        <div className="mb-6 flex flex-col items-center">
+        <div className="mt-6 flex flex-col items-center">
           <div className="relative">
             {!isProfileLoaded ? null : cropImage ? (
               <Image
                 src={cropImage}
                 alt="プロフィール画像プレビュー"
-                width={56}
-                height={56}
+                width={80}
+                height={80}
                 unoptimized
-                className="h-14 w-14 rounded-full object-cover"
+                className="h-20 w-20 rounded-full object-cover"
               />
             ) : avatarUrl ? (
               <Image
                 src={avatarUrl}
                 alt="プロフィール画像"
-                width={56}
-                height={56}
+                width={80}
+                height={80}
                 unoptimized
-                className="h-14 w-14 rounded-full object-cover"
+                className="h-20 w-20 rounded-full object-cover"
               />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#d9a3a3] text-xl font-medium text-white">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#d9a3a3] text-2xl font-medium text-white">
                 {nickname ? nickname.charAt(0).toUpperCase() : "?"}
               </div>
             )}
 
-            <label className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 cursor-pointer items-center justify-center rounded-full bg-white shadow">
+            <label className="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white shadow">
               <svg
                 viewBox="0 0 24 24"
-                className="h-2.5 w-2.5 text-stone-500"
+                className="h-4 w-4 text-stone-500"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.8"
@@ -312,12 +311,12 @@ export default function EditProfilePage() {
                   setCropImage(null);
                   setAvatarUrl(null);
                 }}
-                className="absolute -bottom-0.5 -left-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-white shadow"
+                className="absolute -bottom-1 -left-1 flex h-7 w-7 items-center justify-center rounded-full bg-white shadow"
                 aria-label="プロフィール画像を削除"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  className="h-2.5 w-2.5 text-stone-500"
+                  className="h-4 w-4 text-stone-500"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="1.8"
@@ -333,11 +332,12 @@ export default function EditProfilePage() {
             )}
           </div>
 
-          <p className="mt-2 text-xs text-stone-500">画像を変更</p>
+          <p className="mt-3 text-xs text-stone-500">画像を変更</p>
         </div>
+
         {isCropOpen && cropImage && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
-            <div className="w-full max-w-[280px] rounded-2xl bg-white p-3">
+            <div className="w-full max-w-[280px] rounded-2xl bg-[#fbf5f3] p-4 shadow-xl">
               <h2 className="mb-3 text-center text-sm font-medium text-stone-700">
                 プロフィール画像を調整
               </h2>
@@ -368,7 +368,7 @@ export default function EditProfilePage() {
                 />
               </div>
 
-              <div className="mt-3 flex gap-2">
+              <div className="mt-4 flex gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -386,7 +386,7 @@ export default function EditProfilePage() {
                 <button
                   type="button"
                   onClick={handleCropConfirm}
-                  className="button-interaction flex-1 rounded-full bg-[#d9a3a3] px-3 py-2 text-sm text-white"
+                  className="button-interaction flex-1 rounded-full bg-[#d9a3a3] px-3 py-2 text-sm font-medium text-white"
                 >
                   決定
                 </button>
@@ -394,39 +394,75 @@ export default function EditProfilePage() {
             </div>
           </div>
         )}
-      </>
 
-      <input
-        type="text"
-        value={nickname}
-        onChange={(e) => setNickname(e.target.value)}
-      />
+        <div className="mt-7 space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              ニックネーム
+            </label>
 
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3 text-stone-700"
+            />
+          </div>
 
-      <label>新しいパスワード</label>
-      <input
-        type="password"
-        placeholder="新しいパスワード"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-      />
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              メールアドレス
+            </label>
 
-      <p>8文字以上で入力してください</p>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3 text-stone-700"
+            />
+          </div>
 
-      <label>新しいパスワード（確認）</label>
-      <input
-        type="password"
-        placeholder="もう一度入力してください"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-      />
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              新しいパスワード
+            </label>
 
-      <button onClick={handleSave}>保存</button>
+            <input
+              type="password"
+              placeholder="新しいパスワード"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3 text-stone-700"
+            />
+
+            <p className="mt-2 text-xs text-stone-500">
+              変更する場合は8文字以上で入力してください
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              新しいパスワード（確認）
+            </label>
+
+            <input
+              type="password"
+              placeholder="もう一度入力してください"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3 text-stone-700"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            className="button-interaction mx-auto block w-full max-w-xs rounded-full bg-[#d9a3a3] px-6 py-3 font-medium text-white"
+          >
+            保存
+          </button>
+        </div>
+      </div>
     </main>
   );
 }
