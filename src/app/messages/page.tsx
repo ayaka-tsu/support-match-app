@@ -36,6 +36,7 @@ export default function MessagesPage() {
     }[]
   >([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [isMatchingChecked, setIsMatchingChecked] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const selectedNickname =
@@ -117,7 +118,9 @@ export default function MessagesPage() {
       }
     };
 
-    getUser();
+    getUser().finally(() => {
+      setIsMatchingChecked(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -432,7 +435,7 @@ export default function MessagesPage() {
       <div className="mx-auto w-full max-w-4xl px-6">
         <h1 className="page-title">メッセージ</h1>
       </div>
-      {!showHistory && !matchingId && (
+      {isMatchingChecked && !showHistory && !matchingId && (
         <div className="mx-auto w-full max-w-4xl px-6 pt-6">
           <button
             type="button"

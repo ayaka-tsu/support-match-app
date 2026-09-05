@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
@@ -17,6 +17,25 @@ export default function SupportAvailableToggle({
   const [supportAvailable, setSupportAvailable] = useState(
     initialSupportAvailable,
   );
+
+  useEffect(() => {
+    const fetchSupportAvailable = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("support_available")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error(error.message);
+        return;
+      }
+
+      setSupportAvailable(data.support_available);
+    };
+
+    fetchSupportAvailable();
+  }, [userId]);
 
   const handleChange = async () => {
     const nextValue = !supportAvailable;

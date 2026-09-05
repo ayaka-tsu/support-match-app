@@ -13,23 +13,25 @@ export default async function DashboardPage() {
   if (!user) {
     redirect("/login");
   }
+  const [
+    { data: profile },
+    { data: supporterMatching },
+    { data: userRequests },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("nickname, avatar_url, support_available")
+      .eq("id", user.id)
+      .maybeSingle(),
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("nickname, avatar_url, support_available")
-    .eq("id", user.id)
-    .maybeSingle();
-  const { data: supporterMatching } = await supabase
-    .from("matchings")
-    .select("id")
-    .eq("supporter_id", user.id)
-    .eq("status", "active");
+    supabase
+      .from("matchings")
+      .select("id")
+      .eq("supporter_id", user.id)
+      .eq("status", "active"),
 
-  const { data: userRequests } = await supabase
-    .from("support_requests")
-    .select("id")
-    .eq("user_id", user.id);
-
+    supabase.from("support_requests").select("id").eq("user_id", user.id),
+  ]);
   const requestIds = userRequests?.map((request) => request.id) ?? [];
 
   let hasRequesterMatching = false;
@@ -133,7 +135,7 @@ export default async function DashboardPage() {
           </Link>
 
           <Link
-            href="/support-request"
+            href="/support-requests"
             className="button-interaction flex items-center justify-between rounded-full bg-[#d9a3a3] px-6 py-3.5 font-medium text-white"
           >
             <span>サポート依頼</span>

@@ -16,8 +16,10 @@ export default function MatchingPage() {
   const [matchingId, setMatchingId] = useState<string | null>(null);
   const [isEnded, setIsEnded] = useState(false);
   const [isCanceled, setIsCanceled] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const [isCanceledByOther, setIsCanceledByOther] = useState(false);
   const [isNewMatching, setIsNewMatching] = useState(false);
+  const [isMatchingChecked, setIsMatchingChecked] = useState(false);
   const [matchingCreatedAt, setMatchingCreatedAt] = useState<string | null>(
     null,
   );
@@ -202,8 +204,9 @@ export default function MatchingPage() {
         }
       }
     };
-
-    checkMatching();
+    checkMatching().finally(() => {
+      setIsMatchingChecked(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -424,243 +427,196 @@ export default function MatchingPage() {
   }, [isMatching, matchingId, matchingCreatedAt]);
 
   return (
-    <main>
+    <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
       <HamburgerMenu />
-      <h1>マッチング</h1>
 
-      {isEnded ? (
-        <p>ご利用ありがとうございました</p>
-      ) : isMatching ? (
-        <>
-          <p>マッチング中です</p>
-          <div className="flex items-center gap-3">
-            {matchedAvatarUrl ? (
-              <Image
-                src={matchedAvatarUrl}
-                alt={`${matchedNickname}のプロフィール画像`}
-                width={48}
-                height={48}
-                className="h-12 w-12 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#d9a3a3] text-lg font-medium text-white">
-                {matchedNickname
-                  ? matchedNickname.charAt(0).toUpperCase()
-                  : "?"}
+      <div className="mx-auto w-full max-w-md">
+        <h1 className="page-title">マッチング</h1>
+
+        {isEnded ? (
+          <div className="mt-10 text-center">
+            <p className="font-medium text-stone-700">
+              ご利用ありがとうございました
+            </p>
+          </div>
+        ) : isMatching ? (
+          <div className="mt-8">
+            <p className="text-center text-sm font-medium text-[#a97d7d]">
+              マッチング中です
+            </p>
+
+            <div className="mt-6 flex flex-col items-center">
+              {matchedAvatarUrl ? (
+                <Image
+                  src={matchedAvatarUrl}
+                  alt={`${matchedNickname}のプロフィール画像`}
+                  width={80}
+                  height={80}
+                  className="h-20 w-20 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#d9a3a3] text-2xl font-medium text-white">
+                  {matchedNickname
+                    ? matchedNickname.charAt(0).toUpperCase()
+                    : "?"}
+                </div>
+              )}
+
+              <p className="mt-3 text-lg font-medium text-stone-700">
+                {matchedNickname}
+              </p>
+            </div>
+
+            <div className="mt-7 rounded-2xl border border-stone-200 bg-white/70 px-5 py-5">
+              {matchingCreatedAt && (
+                <>
+                  <div>
+                    <p className="text-xs text-stone-500">サポート成立</p>
+                    <p className="mt-1 font-medium text-stone-700">
+                      {new Date(matchingCreatedAt).toLocaleTimeString("ja-JP", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 border-t border-stone-200 pt-4">
+                    <p className="text-xs text-stone-500">利用可能時間</p>
+                    <p className="mt-1 text-sm text-stone-700">
+                      {new Date(
+                        new Date(matchingCreatedAt).getTime() + 60 * 60 * 1000,
+                      ).toLocaleTimeString("ja-JP", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      まで
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => router.push("/messages")}
+              className="button-interaction mx-auto mt-6 block w-full max-w-xs rounded-full bg-[#d9a3a3] px-6 py-3 font-medium text-white"
+            >
+              メッセージを開く
+            </button>
+
+            <div className="mt-5 flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsCancelConfirmOpen(true)}
+                className="button-interaction rounded-full border border-[#c96f6f] px-5 py-2 text-sm font-medium text-[#c96f6f]"
+              >
+                キャンセル
+              </button>
+
+              <button
+                type="button"
+                onClick={handleEndMatching}
+                className="button-interaction rounded-full border border-stone-300 bg-white/60 px-5 py-2 text-sm font-medium text-stone-600"
+              >
+                マッチング終了
+              </button>
+            </div>
+          </div>
+        ) : isMatchingChecked ? (
+          <div className="mt-10 text-center">
+            <p className="text-stone-600">現在マッチングはありません</p>
+          </div>
+        ) : null}
+        {isCancelConfirmOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-6">
+            <div className="w-full max-w-sm rounded-3xl bg-[#fbf5f3] p-6 text-center shadow-xl">
+              <p className="text-stone-700">マッチングをキャンセルしますか？</p>
+
+              <div className="mt-6 flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsCancelConfirmOpen(false);
+                    await handleCancelMatching();
+                  }}
+                  className="button-interaction rounded-full bg-[#c96f6f] px-6 py-2.5 font-medium text-white"
+                >
+                  キャンセルする
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCancelConfirmOpen(false)}
+                  className="button-interaction rounded-full bg-stone-200 px-6 py-2.5 text-stone-600"
+                >
+                  戻る
+                </button>
               </div>
-            )}
-
-            <p>{matchedNickname}</p>
+            </div>
           </div>
-          {matchingCreatedAt && (
-            <p>
-              サポート成立{" "}
-              {new Date(matchingCreatedAt).toLocaleTimeString("ja-JP", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          )}
+        )}
 
-          {matchingCreatedAt && (
-            <p>
-              このサポート成立は
-              {new Date(
-                new Date(matchingCreatedAt).getTime() + 60 * 60 * 1000,
-              ).toLocaleTimeString("ja-JP", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-              まで有効です
-            </p>
-          )}
+        {isNewMatching && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-6">
+            <div className="relative w-full max-w-sm rounded-3xl bg-[#fbf5f3] px-6 py-8 text-center shadow-xl">
+              <button
+                type="button"
+                onClick={handleCloseNewMatching}
+                className="absolute right-4 top-3 text-2xl text-stone-500"
+                aria-label="閉じる"
+              >
+                ×
+              </button>
 
-          <button type="button" onClick={() => router.push("/messages")}>
-            メッセージを開く
-          </button>
+              <p className="font-medium text-stone-700">
+                サポートが成立しました
+              </p>
 
-          <button type="button" onClick={handleCancelMatching}>
-            キャンセル
-          </button>
-
-          <button type="button" onClick={handleEndMatching}>
-            マッチング終了
-          </button>
-        </>
-      ) : (
-        <p>現在マッチングはありません</p>
-      )}
-
-      {isNewMatching && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.35)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              position: "relative",
-              backgroundColor: "white",
-              padding: "32px",
-              borderRadius: "12px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleCloseNewMatching}
-              style={{
-                position: "absolute",
-                top: "8px",
-                right: "8px",
-              }}
-            >
-              ×
-            </button>
-            <p>サポートが成立しました</p>
+              {matchedNickname && (
+                <p className="mt-2 text-sm text-stone-500">
+                  {matchedNickname}さんとマッチングしました
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {isCanceled && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.35)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              position: "relative",
-              backgroundColor: "white",
-              padding: "32px",
-              borderRadius: "12px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setIsCanceled(false)}
-              style={{
-                position: "absolute",
-                top: "8px",
-                right: "8px",
-              }}
-            >
-              ×
-            </button>
-            <p>キャンセルしました</p>
+        {isCanceled && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-6">
+            <div className="relative w-full max-w-sm rounded-3xl bg-[#fbf5f3] px-6 py-8 text-center shadow-xl">
+              <button
+                type="button"
+                onClick={() => setIsCanceled(false)}
+                className="absolute right-4 top-3 text-2xl text-stone-500"
+                aria-label="閉じる"
+              >
+                ×
+              </button>
+
+              <p className="font-medium text-stone-700">キャンセルしました</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {isCanceledByOther && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.35)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              position: "relative",
-              backgroundColor: "white",
-              padding: "32px",
-              borderRadius: "12px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleCloseCanceledByOther}
-              style={{
-                position: "absolute",
-                top: "8px",
-                right: "8px",
-              }}
-            >
-              ×
-            </button>
-            <p>相手の方がキャンセルしました</p>
+        {isCanceledByOther && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-6">
+            <div className="relative w-full max-w-sm rounded-3xl bg-[#fbf5f3] px-6 py-8 text-center shadow-xl">
+              <button
+                type="button"
+                onClick={handleCloseCanceledByOther}
+                className="absolute right-4 top-3 text-2xl text-stone-500"
+                aria-label="閉じる"
+              >
+                ×
+              </button>
+
+              <p className="font-medium text-stone-700">
+                相手の方がキャンセルしました
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-      {/* {isEnded ? (
-        <>
-          <p>ご利用ありがとうございました</p>
-        </>
-      ) : isNewMatching ? (
-        <div>
-          <button type="button" onClick={handleCloseNewMatching}>
-            ×
-          </button>
-          <p>サポートが成立しました</p>
-        </div>
-      ) : isCanceled ? (
-        <div>
-          <button type="button" onClick={() => setIsCanceled(false)}>
-            ×
-          </button>
-          <p>キャンセルしました</p>
-        </div>
-      ) : isCanceledByOther ? (
-        <div>
-          <button type="button" onClick={handleCloseCanceledByOther}>
-            ×
-          </button>
-          <p>相手の方がキャンセルしました</p>
-        </div>
-      ) : isMatching ? (
-        <>
-          <p>マッチング中です</p>
-          <p>相手: {matchedNickname}</p>
-          {matchingCreatedAt && (
-            <p>
-              サポート成立{" "}
-              {new Date(matchingCreatedAt).toLocaleTimeString("ja-JP", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          )}
-          {matchingCreatedAt && (
-            <p>
-              このサポート成立は
-              {new Date(
-                new Date(matchingCreatedAt).getTime() + 60 * 60 * 1000,
-              ).toLocaleTimeString("ja-JP", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-              まで有効です
-            </p>
-          )}
-          <button type="button" onClick={() => router.push("/messages")}>
-            メッセージを開く
-          </button>
-
-          <button type="button" onClick={handleCancelMatching}>
-            キャンセル
-          </button>
-
-          <button onClick={handleEndMatching}>マッチング終了</button>
-        </>
-      ) : (
-        <p>現在マッチングはありません</p>
-      )} */}
+        )}
+      </div>
     </main>
   );
 }

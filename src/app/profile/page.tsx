@@ -68,42 +68,47 @@ export default function ProfilePage() {
             編集する
           </Link>
         </div>
-        {!isProfileLoaded ? null : avatarUrl ? (
-          <Image
-            src={avatarUrl}
-            alt="プロフィール画像"
-            width={96}
-            height={96}
-            unoptimized
-            className="mx-auto mt-6 mb-4 h-20 w-20 rounded-full object-cover"
-          />
-        ) : (
-          <div className="mx-auto mt-6 mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#d9a3a3] text-3xl font-medium text-white">
-            {nickname ? nickname.charAt(0).toUpperCase() : "?"}
-          </div>
-        )}
-        <div className="mx-auto mt-6 w-full max-w-sm rounded-2xl bg-[#f9eaea] px-5 py-5">
-          <div>
-            <p className="text-xs text-stone-500">ニックネーム</p>
-            <p className="mt-1 font-medium text-stone-700">{nickname}</p>
-          </div>
-
-          <div className="mt-5">
-            <p className="text-xs text-stone-500">メールアドレス</p>
-            <p className="mt-1 text-sm text-stone-700">{email}</p>
-          </div>
-
-          {userId && (
-            <div className="mt-5 flex items-center justify-between border-t border-[#ead6d6] pt-4">
-              <span className="text-sm text-stone-600">サポート</span>
-
-              <SupportAvailableToggle
-                userId={userId}
-                initialSupportAvailable={supportAvailable}
+        {isProfileLoaded && (
+          <>
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt="プロフィール画像"
+                width={96}
+                height={96}
+                unoptimized
+                className="mx-auto mt-6 mb-4 h-20 w-20 rounded-full object-cover"
               />
+            ) : (
+              <div className="mx-auto mt-6 mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#d9a3a3] text-3xl font-medium text-white">
+                {nickname ? nickname.charAt(0).toUpperCase() : "?"}
+              </div>
+            )}
+
+            <div className="mx-auto mt-6 w-full max-w-sm rounded-2xl bg-[#f9eaea] px-5 py-5">
+              <div>
+                <p className="text-xs text-stone-500">ニックネーム</p>
+                <p className="mt-1 font-medium text-stone-700">{nickname}</p>
+              </div>
+
+              <div className="mt-5">
+                <p className="text-xs text-stone-500">メールアドレス</p>
+                <p className="mt-1 text-sm text-stone-700">{email}</p>
+              </div>
+
+              {userId && (
+                <div className="mt-5 flex items-center justify-between border-t border-[#ead6d6] pt-4">
+                  <span className="text-sm text-stone-600">サポート</span>
+
+                  <SupportAvailableToggle
+                    userId={userId}
+                    initialSupportAvailable={supportAvailable}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </main>
   );

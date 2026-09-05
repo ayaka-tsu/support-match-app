@@ -180,10 +180,6 @@ export default function StoresList({ stores }: StoreListProps) {
     return normalizeText(target).includes(normalizeText(search));
   });
 
-  if (isCheckingRequest) {
-    return null;
-  }
-
   return (
     <div className="w-full">
       <div className="flex gap-2">
@@ -241,9 +237,9 @@ export default function StoresList({ stores }: StoreListProps) {
                     </p>
                   )}
                 </div>
-
                 <button
                   type="button"
+                  disabled={isCheckingRequest}
                   onClick={() => {
                     if (isRequesting || isMatching) {
                       setRequestMessage(
@@ -261,7 +257,7 @@ export default function StoresList({ stores }: StoreListProps) {
                     isSelected
                       ? "bg-[#c98f98] text-white"
                       : "bg-[#d9a3a3] text-white"
-                  }`}
+                  } ${isCheckingRequest ? "cursor-not-allowed opacity-50" : ""}`}
                 >
                   {isSelected ? "選択中" : "選択"}
                 </button>

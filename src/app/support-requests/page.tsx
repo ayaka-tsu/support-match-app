@@ -147,9 +147,16 @@ export default function SupportRequestsPage() {
   };
 
   if (isCheckingRequest) {
-    return null;
-  }
+    return (
+      <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+        <HamburgerMenu />
 
+        <div className="mx-auto w-full max-w-2xl">
+          <h1 className="page-title">サポート依頼</h1>
+        </div>
+      </main>
+    );
+  }
   if (!selectedStore) {
     return (
       <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
