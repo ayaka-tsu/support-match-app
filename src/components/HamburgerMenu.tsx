@@ -69,6 +69,29 @@ export default function HamburgerMenu() {
         return;
       }
 
+      const { data: supporterEnded, error: supporterEndedError } =
+        await supabase
+          .from("matchings")
+          .select("id")
+          .eq("supporter_id", user.id)
+          .eq("status", "ended")
+          .neq("ended_by", user.id)
+          .is("ended_seen_at", null)
+          .limit(1);
+
+      if (supporterEndedError) {
+        console.error(
+          "ended notification check error:",
+          supporterEndedError.message,
+        );
+        return;
+      }
+
+      if (supporterEnded && supporterEnded.length > 0) {
+        setHasNotification(true);
+        return;
+      }
+
       const { data: requestData, error: requestError } = await supabase
         .from("support_requests")
         .select("id")
@@ -108,6 +131,29 @@ export default function HamburgerMenu() {
           return;
         }
 
+        const { data: requesterEnded, error: requesterEndedError } =
+          await supabase
+            .from("matchings")
+            .select("id")
+            .in("support_request_id", requestIds)
+            .eq("status", "ended")
+            .neq("ended_by", user.id)
+            .is("ended_seen_at", null)
+            .limit(1);
+
+        if (requesterEndedError) {
+          console.error(
+            "requester ended notification check error:",
+            requesterEndedError.message,
+          );
+          return;
+        }
+
+        if (requesterEnded && requesterEnded.length > 0) {
+          setHasNotification(true);
+          return;
+        }
+
         const { data: requesterMatching, error: requesterError } =
           await supabase
             .from("matchings")
@@ -136,8 +182,22 @@ export default function HamburgerMenu() {
     const handleMatchingNotificationRead = () => {
       checkNotifications();
     };
-
     checkNotifications();
+
+    const matchingChannel = supabase
+      .channel("matching-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "matchings",
+        },
+        () => {
+          checkNotifications();
+        },
+      )
+      .subscribe();
 
     window.addEventListener(
       "matching-notification-read",
@@ -145,6 +205,8 @@ export default function HamburgerMenu() {
     );
 
     return () => {
+      supabase.removeChannel(matchingChannel);
+
       window.removeEventListener(
         "matching-notification-read",
         handleMatchingNotificationRead,
@@ -232,6 +294,35 @@ export default function HamburgerMenu() {
       );
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("message-notification-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const newMessage = payload.new as {
+            sender_id: string;
+          };
+
+          if (newMessage.sender_id !== user.id) {
+            setHasMessageNotification(true);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   useEffect(() => {
     const getUser = async () => {

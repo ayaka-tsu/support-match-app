@@ -18,6 +18,7 @@ export default function MatchingPage() {
   const [isCanceled, setIsCanceled] = useState(false);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const [isCanceledByOther, setIsCanceledByOther] = useState(false);
+  const [isEndedByOther, setIsEndedByOther] = useState(false);
   const [isNewMatching, setIsNewMatching] = useState(false);
   const [isMatchingChecked, setIsMatchingChecked] = useState(false);
   const [matchingCreatedAt, setMatchingCreatedAt] = useState<string | null>(
@@ -139,6 +140,28 @@ export default function MatchingPage() {
         }
       }
 
+      if (!data || data.length === 0) {
+        const { data: endedData, error: endedError } = await supabase
+          .from("matchings")
+          .select("id, ended_by, ended_at, ended_seen_at")
+          .eq("supporter_id", user.id)
+          .eq("status", "ended")
+          .neq("ended_by", user.id)
+          .is("ended_seen_at", null)
+          .order("ended_at", { ascending: false })
+          .limit(1);
+
+        if (endedError) {
+          console.error("ended matching check error:", endedError.message);
+          return;
+        }
+
+        if (endedData && endedData.length > 0) {
+          setMatchingId(endedData[0].id);
+          setIsEndedByOther(true);
+        }
+      }
+
       const { data: requestData, error: requestError } = await supabase
         .from("support_requests")
         .select("id")
@@ -203,11 +226,97 @@ export default function MatchingPage() {
           setIsCanceledByOther(true);
         }
       }
+
+      if (!matchingData || matchingData.length === 0) {
+        const { data: endedMatchingData, error: endedMatchingError } =
+          await supabase
+            .from("matchings")
+            .select("id, ended_by, ended_at, ended_seen_at")
+            .in("support_request_id", requestIds)
+            .eq("status", "ended")
+            .neq("ended_by", user.id)
+            .is("ended_seen_at", null)
+            .order("ended_at", { ascending: false })
+            .limit(1);
+
+        if (endedMatchingError) {
+          console.error(
+            "ended requester matching check error:",
+            endedMatchingError.message,
+          );
+          return;
+        }
+
+        if (endedMatchingData && endedMatchingData.length > 0) {
+          setMatchingId(endedMatchingData[0].id);
+          setIsEndedByOther(true);
+        }
+      }
     };
     checkMatching().finally(() => {
       setIsMatchingChecked(true);
     });
   }, []);
+
+  useEffect(() => {
+    if (!matchingId) {
+      return;
+    }
+
+    const subscribeToMatchingEnd = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        return;
+      }
+
+      const channel = supabase
+        .channel(`matching-end-${matchingId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "matchings",
+            filter: `id=eq.${matchingId}`,
+          },
+          (payload) => {
+            const updatedMatching = payload.new as {
+              status?: string;
+              ended_by?: string | null;
+              ended_seen_at?: string | null;
+            };
+
+            if (
+              updatedMatching.status === "ended" &&
+              updatedMatching.ended_by &&
+              updatedMatching.ended_by !== user.id &&
+              !updatedMatching.ended_seen_at
+            ) {
+              setIsMatching(false);
+              setIsEndedByOther(true);
+            }
+          },
+        )
+        .subscribe();
+
+      return channel;
+    };
+
+    let matchingChannel: ReturnType<typeof supabase.channel> | null = null;
+
+    subscribeToMatchingEnd().then((channel) => {
+      matchingChannel = channel ?? null;
+    });
+
+    return () => {
+      if (matchingChannel) {
+        supabase.removeChannel(matchingChannel);
+      }
+    };
+  }, [matchingId]);
 
   useEffect(() => {
     if (!matchedUserId) {
@@ -266,12 +375,19 @@ export default function MatchingPage() {
     if (!matchingId) {
       return;
     }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
+    if (!user) {
+      return;
+    }
     const { error } = await supabase
       .from("matchings")
       .update({
         status: "ended",
         ended_at: new Date().toISOString(),
+        ended_by: user.id,
         updated_at: new Date().toISOString(),
       })
       .eq("id", matchingId);
@@ -348,6 +464,26 @@ export default function MatchingPage() {
     }
     window.dispatchEvent(new Event("matching-notification-read"));
     setIsCanceledByOther(false);
+  };
+
+  const handleCloseEndedByOther = async () => {
+    if (!matchingId) return;
+
+    const { error } = await supabase
+      .from("matchings")
+      .update({
+        ended_seen_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", matchingId);
+
+    if (error) {
+      console.error("ended seen update error:", error.message);
+      return;
+    }
+
+    window.dispatchEvent(new Event("matching-notification-read"));
+    setIsEndedByOther(false);
   };
 
   const handleCloseNewMatching = async () => {
@@ -612,6 +748,25 @@ export default function MatchingPage() {
 
               <p className="font-medium text-stone-700">
                 相手の方がキャンセルしました
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isEndedByOther && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-6">
+            <div className="relative w-full max-w-sm rounded-3xl bg-[#fbf5f3] px-6 py-8 text-center shadow-xl">
+              <button
+                type="button"
+                onClick={handleCloseEndedByOther}
+                className="absolute right-4 top-3 text-2xl text-stone-500"
+                aria-label="閉じる"
+              >
+                ×
+              </button>
+
+              <p className="font-medium text-stone-700">
+                このマッチングは終了しました
               </p>
             </div>
           </div>

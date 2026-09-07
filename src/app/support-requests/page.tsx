@@ -3,7 +3,7 @@
 import { useStore } from "@/context/StoreContext";
 import { useMatching } from "@/context/MatchingContext";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import HamburgerMenu from "@/components/HamburgerMenu";
 
@@ -16,14 +16,18 @@ export default function SupportRequestsPage() {
   const [isRequesting, setIsRequesting] = useState(false);
   const [isCheckingRequest, setIsCheckingRequest] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const storeId = searchParams.get("storeId");
 
   useEffect(() => {
+    let isCancelled = false;
+
     const checkActiveRequest = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (isCancelled || !user) return;
 
       const thirtyMinutesAgo = new Date(
         Date.now() - 30 * 60 * 1000,
@@ -37,6 +41,8 @@ export default function SupportRequestsPage() {
         .order("created_at", { ascending: false })
         .limit(1);
 
+      if (isCancelled) return;
+
       if (error) {
         console.error("active request check error", error.message);
         return;
@@ -49,14 +55,23 @@ export default function SupportRequestsPage() {
           .eq("support_request_id", data[0].id)
           .maybeSingle();
 
+        if (isCancelled) return;
+
         if (matchingError) {
           console.error("request matching check error", matchingError.message);
           return;
         }
+
         if (matchingData) {
           setIsRequesting(false);
+
+          if (!storeId) {
+            setSelectedStore(null);
+          }
+
           return;
         }
+
         setIsRequesting(true);
 
         const { data: storeData } = await supabase
@@ -65,16 +80,30 @@ export default function SupportRequestsPage() {
           .eq("id", data[0].store_id)
           .single();
 
+        if (isCancelled) return;
+
         if (storeData) {
           setSelectedStore(storeData);
         }
       } else {
         setIsRequesting(false);
+
+        if (!storeId) {
+          setSelectedStore(null);
+        }
       }
     };
-    checkActiveRequest().finally(() => setIsCheckingRequest(false));
-  }, [setSelectedStore]);
 
+    checkActiveRequest().finally(() => {
+      if (!isCancelled) {
+        setIsCheckingRequest(false);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [setSelectedStore, storeId]);
   const handleConfirmRequest = async () => {
     const {
       data: { user },
@@ -114,18 +143,6 @@ export default function SupportRequestsPage() {
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
-
-    // const thirtyMinutesAgo = new Date(
-    //   Date.now() - 30 * 60 * 1000,
-    // ).toISOString();
-
-    // const { error } = await supabase
-    //   .from("support_requests")
-    //   .delete()
-    //   .eq("user_id", user.id)
-    //   // .gte("created_at", thirtyMinutesAgo);
-    //   .order("created_at", { ascending: false })
-    //   .limit(1);
 
     if (error || !data) {
       console.error("request fetch error:", error?.message);
@@ -216,7 +233,10 @@ export default function SupportRequestsPage() {
 
               <button
                 type="button"
-                onClick={() => router.push("/stores")}
+                onClick={() => {
+                  setSelectedStore(null);
+                  router.push("/stores?reselect=true");
+                }}
                 className="mt-4 text-sm text-[#a97d7d] underline underline-offset-4"
               >
                 店舗を選び直す

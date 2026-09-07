@@ -17,6 +17,7 @@ export default function MessagesPage() {
       sender_id: string;
       content: string;
       created_at: string;
+      read_at: string | null;
     }[]
   >([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -38,6 +39,11 @@ export default function MessagesPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [isMatchingChecked, setIsMatchingChecked] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const selectedNickname =
     conversationNames.find(
@@ -347,7 +353,7 @@ export default function MessagesPage() {
 
       const { data, error } = await supabase
         .from("messages")
-        .select("id, sender_id, content, created_at")
+        .select("id, sender_id, content, created_at, read_at")
         .in("matching_id", targetMatchingIds)
         .order("created_at", { ascending: true });
       if (error) {
@@ -361,6 +367,76 @@ export default function MessagesPage() {
     getMessages();
   }, [matchingId, conversationNames]);
 
+  useEffect(() => {
+    if (!userId || !matchingId) return;
+    const channel = supabase
+      .channel("message-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `matching_id=eq.${matchingId}`,
+        },
+        async (payload) => {
+          const newMessage = payload.new as {
+            id: string;
+            sender_id: string;
+            matching_id: string;
+            content: string;
+            created_at: string;
+            read_at: string | null;
+          };
+
+          if (newMessage.sender_id === userId) return;
+
+          setMessages((prevMessages) => {
+            if (prevMessages.some((message) => message.id === newMessage.id)) {
+              return prevMessages;
+            }
+
+            return [...prevMessages, newMessage];
+          });
+
+          await supabase
+            .from("messages")
+            .update({
+              read_at: new Date().toISOString(),
+            })
+            .eq("id", newMessage.id)
+            .is("read_at", null);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `matching_id=eq.${matchingId}`,
+        },
+        (payload) => {
+          const updatedMessage = payload.new as {
+            id: string;
+            read_at: string | null;
+          };
+
+          setMessages((prevMessages) =>
+            prevMessages.map((message) =>
+              message.id === updatedMessage.id
+                ? { ...message, read_at: updatedMessage.read_at }
+                : message,
+            ),
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [matchingId, userId]);
   useEffect(() => {
     if (!matchingId || !userId) return;
 
@@ -410,7 +486,7 @@ export default function MessagesPage() {
         content: content.trim(),
         updated_at: new Date().toISOString(),
       })
-      .select("id, sender_id, content, created_at")
+      .select("id, sender_id, content, created_at, read_at")
       .single();
 
     if (error) {
@@ -665,6 +741,7 @@ export default function MessagesPage() {
                           </div>
 
                           <small className="text-stone-400">
+                            {message.read_at && "既読 "}
                             {messageTime}
                           </small>
                         </div>
@@ -673,6 +750,7 @@ export default function MessagesPage() {
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
           </div>
 

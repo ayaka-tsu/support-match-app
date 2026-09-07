@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useStore } from "@/context/StoreContext";
 
@@ -33,6 +33,15 @@ export default function StoresList({ stores }: StoreListProps) {
   const [isMatching, setIsMatching] = useState(false);
   const [isCheckingRequest, setIsCheckingRequest] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isReselecting = searchParams.get("reselect") === "true";
+
+  useEffect(() => {
+    if (!isReselecting) return;
+
+    setSelectedStore(null);
+    router.replace("/stores");
+  }, [isReselecting, router, setSelectedStore]);
 
   useEffect(() => {
     const checkActiveReruest = async () => {
@@ -125,6 +134,7 @@ export default function StoresList({ stores }: StoreListProps) {
 
         if (matchingData) {
           setIsRequesting(false);
+          setSelectedStore(null);
           return;
         }
 
@@ -134,7 +144,7 @@ export default function StoresList({ stores }: StoreListProps) {
       }
     };
     checkActiveReruest().finally(() => setIsCheckingRequest(false));
-  }, []);
+  }, [setSelectedStore]);
 
   const handleSelectStore = () => {
     if (!selectedStore) return;
