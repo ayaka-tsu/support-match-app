@@ -18,6 +18,7 @@ export default function SupportAvailableToggle({
     initialSupportAvailable,
   );
 
+
   useEffect(() => {
     const fetchSupportAvailable = async () => {
       const { data, error } = await supabase

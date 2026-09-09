@@ -54,20 +54,12 @@ export default function ProfilePage() {
   }, [router]);
 
   return (
-    <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+    <main className="page-background min-h-[calc(100dvh-94px)] overflow-x-hidden px-6 py-6">
       <HamburgerMenu />
 
       <div className="mx-auto w-full max-w-2xl">
         <h1 className="page-title">プロフィール</h1>
 
-        <div className="mt-4 text-right">
-          <Link
-            href="/profile/edit"
-            className="text-sm text-[#a97d7d] underline underline-offset-4"
-          >
-            編集する
-          </Link>
-        </div>
         {isProfileLoaded && (
           <>
             {avatarUrl ? (
@@ -106,6 +98,14 @@ export default function ProfilePage() {
                   />
                 </div>
               )}
+            </div>
+            <div className="mt-4 text-center">
+              <Link
+                href="/profile/edit"
+                className="button-interaction inline-block rounded-full border border-[#d9a3a3] bg-[#fcf6f6] px-5 py-2 text-sm text-[#a97d7d]"
+              >
+                編集する
+              </Link>
             </div>
           </>
         )}

@@ -182,7 +182,7 @@ export default function MessagesPage() {
       if (allMatchingIds.length > 0) {
         const { data: matchingData, error: matchingDataError } = await supabase
           .from("matchings")
-          .select("id, supporter_id, support_request_id")
+          .select("id, supporter_id, support_request_id, status, ended_at")
           .in("id", allMatchingIds);
 
         if (matchingDataError) {
@@ -192,6 +192,25 @@ export default function MessagesPage() {
           );
           return;
         }
+
+        const { data: existingMessages, error: existingMessagesError } =
+          await supabase
+            .from("messages")
+            .select("matching_id")
+            .in("matching_id", allMatchingIds);
+
+        if (existingMessagesError) {
+          console.error(
+            "conversation message check error:",
+            existingMessagesError.message,
+          );
+          return;
+        }
+
+        const matchingIdsWithMessages = new Set(
+          existingMessages?.map((message) => message.matching_id) ?? [],
+        );
+
         const supportRequestIds =
           matchingData?.map((matching) => matching.support_request_id) ?? [];
         const { data: supportRequestData, error: supportRequestDataError } =
@@ -232,7 +251,43 @@ export default function MessagesPage() {
           }
         >();
 
-        matchingData?.forEach((matching) => {
+        const now = Date.now();
+
+        const visibleMatchingData =
+          matchingData?.filter((matching) => {
+            const hasMessages = matchingIdsWithMessages.has(matching.id);
+
+            const isWithinGracePeriod =
+              matching.status === "ended" &&
+              matching.ended_at &&
+              now - new Date(matching.ended_at).getTime() < 60 * 60 * 1000;
+
+            return (
+              matching.status === "active" || isWithinGracePeriod || hasMessages
+            );
+          }) ?? [];
+
+        const sortedMatchingData = [...visibleMatchingData].sort((a, b) => {
+          const getPriority = (
+            matching: (typeof visibleMatchingData)[number],
+          ) => {
+            if (matching.status === "active") return 2;
+
+            const isWithinGracePeriod =
+              matching.status === "ended" &&
+              matching.ended_at &&
+              Date.now() - new Date(matching.ended_at).getTime() <
+                60 * 60 * 1000;
+
+            if (isWithinGracePeriod) return 1;
+
+            return 0;
+          };
+
+          return getPriority(b) - getPriority(a);
+        });
+
+        sortedMatchingData.forEach((matching) => {
           const requester = supportRequestData?.find(
             (request) => request.id === matching.support_request_id,
           );
@@ -559,6 +614,7 @@ export default function MessagesPage() {
                   type="button"
                   className="w-fit text-left"
                   onClick={async () => {
+                    setMessages([]);
                     setMatchingId(conversation.matchingIds[0]);
                     setShowHistory(false);
 

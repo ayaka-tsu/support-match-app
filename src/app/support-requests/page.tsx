@@ -15,6 +15,7 @@ export default function SupportRequestsPage() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   const [isCheckingRequest, setIsCheckingRequest] = useState(true);
+  const [isMatching, setIsMatching] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const storeId = searchParams.get("storeId");
@@ -28,7 +29,27 @@ export default function SupportRequestsPage() {
       } = await supabase.auth.getUser();
 
       if (isCancelled || !user) return;
+      const { data: supporterMatching, error: supporterMatchingError } =
+        await supabase
+          .from("matchings")
+          .select("id")
+          .eq("supporter_id", user.id)
+          .eq("status", "active")
+          .limit(1);
 
+      if (supporterMatchingError) {
+        console.error(
+          "supporter matching check error:",
+          supporterMatchingError.message,
+        );
+        return;
+      }
+
+      if (supporterMatching && supporterMatching.length > 0) {
+        setIsMatching(true);
+        setIsRequesting(false);
+        return;
+      }
       const thirtyMinutesAgo = new Date(
         Date.now() - 30 * 60 * 1000,
       ).toISOString();
@@ -51,7 +72,7 @@ export default function SupportRequestsPage() {
       if (data && data.length > 0) {
         const { data: matchingData, error: matchingError } = await supabase
           .from("matchings")
-          .select("id")
+          .select("id, status")
           .eq("support_request_id", data[0].id)
           .maybeSingle();
 
@@ -64,6 +85,10 @@ export default function SupportRequestsPage() {
 
         if (matchingData) {
           setIsRequesting(false);
+
+          if (matchingData.status === "active") {
+            setIsMatching(true);
+          }
 
           if (!storeId) {
             setSelectedStore(null);
@@ -110,6 +135,7 @@ export default function SupportRequestsPage() {
     } = await supabase.auth.getUser();
 
     if (!user) return;
+
     if (!selectedStore) return;
 
     const { error } = await supabase.from("support_requests").insert({
@@ -174,6 +200,23 @@ export default function SupportRequestsPage() {
       </main>
     );
   }
+
+  if (isMatching) {
+    return (
+      <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+        <HamburgerMenu />
+
+        <div className="mx-auto w-full max-w-2xl">
+          <h1 className="page-title">サポート依頼</h1>
+
+          <div className="mx-auto mt-8 text-center">
+            <p className="text-stone-600">現在マッチング中です</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (!selectedStore) {
     return (
       <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">

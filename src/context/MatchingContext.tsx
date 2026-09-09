@@ -7,7 +7,7 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
@@ -21,7 +21,6 @@ type CurrentPosition = {
 type MatchingContextValue = {
   checkForMatching: () => Promise<void>;
 };
-
 const MatchingContext = createContext<MatchingContextValue | null>(null);
 
 export function useMatching() {
@@ -61,6 +60,7 @@ const getDistance = (
 
 export function MatchingProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const positionRef = useRef<CurrentPosition | null>(null);
 
   const getCurrentPosition = useCallback(async () => {
@@ -263,6 +263,8 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
             if (supportOffError) {
               console.error("support off error:", supportOffError.message);
             }
+
+            router.refresh();
           }
         }
       }
@@ -355,9 +357,12 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
 
       if (supportOffError) {
         console.error("support off error:", supportOffError.message);
+        return;
       }
+
+      router.refresh();
     }
-  }, [getCurrentPosition]);
+  }, [getCurrentPosition, router]);
 
   useEffect(() => {
     void checkForMatching();
@@ -370,6 +375,27 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
       window.clearInterval(intervalId);
     };
   }, [checkForMatching, pathname]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("matching-dashboard-refresh")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "matchings",
+        },
+        () => {
+          router.refresh();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [router]);
 
   return (
     <MatchingContext.Provider value={{ checkForMatching }}>

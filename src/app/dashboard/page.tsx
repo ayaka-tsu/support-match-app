@@ -92,6 +92,7 @@ export default async function DashboardPage() {
                 <span className="text-sm text-stone-600">サポート</span>
 
                 <SupportAvailableToggle
+                  key={profile.support_available ? "support-on" : "support-off"}
                   userId={user.id}
                   initialSupportAvailable={profile.support_available}
                 />

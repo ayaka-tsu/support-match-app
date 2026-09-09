@@ -430,6 +430,7 @@ export default function EditProfilePage() {
             <input
               type="password"
               placeholder="新しいパスワード"
+              autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3 text-stone-700"
