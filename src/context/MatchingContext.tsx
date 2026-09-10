@@ -110,7 +110,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
       .from("profiles")
       .select("support_available")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error("profile check error:", profileError.message);
@@ -368,13 +368,14 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
     void checkForMatching();
 
     const intervalId = window.setInterval(() => {
-      void checkForMatching();
+      void checkForMatching().finally(() => {
+        router.refresh();
+      });
     }, 10000);
-
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [checkForMatching, pathname]);
+  }, [checkForMatching, pathname, router]);
 
   useEffect(() => {
     const channel = supabase
@@ -390,7 +391,12 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
           router.refresh();
         },
       )
-      .subscribe();
+
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          router.refresh();
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

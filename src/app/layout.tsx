@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Toaster } from "sonner";
 import { MatchingProvider } from "@/context/MatchingContext";
+import ProfileGate from "@/components/ProfileGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,8 +39,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             priority
           />
         </Link>
+
         <StoreProvider>
-          <MatchingProvider>{children}</MatchingProvider>
+          <MatchingProvider>
+            <ProfileGate>{children}</ProfileGate>
+          </MatchingProvider>
         </StoreProvider>
         <Toaster position="top-center" richColors />
       </body>

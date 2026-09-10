@@ -52,6 +52,7 @@ export default function SignupPage() {
 
             <input
               type="email"
+              autoComplete="email"
               placeholder="example@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -66,6 +67,7 @@ export default function SignupPage() {
 
             <input
               type="password"
+              autoComplete="new-password"
               placeholder="パスワード"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

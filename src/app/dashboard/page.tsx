@@ -81,24 +81,31 @@ export default async function DashboardPage() {
               {profile?.nickname ?? ""}
             </p>
           </Link>
+          {profile?.nickname?.trim() && (
+            <div className="flex shrink-0 flex-col items-end gap-2 pt-1">
+              <p className="text-sm text-stone-500">
+                {isMatching ? "マッチング中" : "マッチングなし"}
+              </p>
 
-          <div className="flex shrink-0 flex-col items-end gap-2 pt-1">
-            <p className="text-sm text-stone-500">
-              {isMatching ? "マッチング中" : "マッチングなし"}
-            </p>
-
-            {profile && (
               <div className="flex items-center gap-1">
                 <span className="text-sm text-stone-600">サポート</span>
-
                 <SupportAvailableToggle
-                  key={profile.support_available ? "support-on" : "support-off"}
+                  key={
+                    isMatching
+                      ? "support-off"
+                      : profile.support_available
+                        ? "support-on"
+                        : "support-off"
+                  }
                   userId={user.id}
-                  initialSupportAvailable={profile.support_available}
+                  isMatching={isMatching}
+                  initialSupportAvailable={
+                    isMatching ? false : profile.support_available
+                  }
                 />
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex items-center gap-4">

@@ -42,6 +42,7 @@ export default function ProfilePage() {
       }
 
       if (!profileData) {
+        setIsProfileLoaded(true);
         return;
       }
 
@@ -88,7 +89,7 @@ export default function ProfilePage() {
                 <p className="mt-1 text-sm text-stone-700">{email}</p>
               </div>
 
-              {userId && (
+              {userId && nickname.trim() && (
                 <div className="mt-5 flex items-center justify-between border-t border-[#ead6d6] pt-4">
                   <span className="text-sm text-stone-600">サポート</span>
 

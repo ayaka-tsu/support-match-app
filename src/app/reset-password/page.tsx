@@ -45,30 +45,54 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main>
-      <h1>パスワード再設定</h1>
+    <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+      <div className="mx-auto w-full max-w-md">
+        <h1 className="page-title text-center">パスワード再設定</h1>
 
-      <label>新しいパスワード</label>
-      <input
-        type="password"
-        placeholder="新しいパスワード"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-      />
+        <div className="mt-8 space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              新しいパスワード
+            </label>
 
-      <p>8文字以上で入力してください</p>
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="新しいパスワード"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3"
+            />
 
-      <label>新しいパスワード（確認）</label>
-      <input
-        type="password"
-        placeholder="もう一度入力してください"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-      />
+            <p className="mt-1.5 text-xs text-stone-500">
+              8文字以上で入力してください
+            </p>
+          </div>
 
-      <button type="button" onClick={handleResetPassword}>
-        パスワードを再設定
-      </button>
+          <div>
+            <label className="mb-2 block text-sm text-stone-600">
+              新しいパスワード（確認）
+            </label>
+
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="もう一度入力してください"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleResetPassword}
+            className="button-interaction w-full rounded-xl bg-[#d9a3a3] px-4 py-2.5 font-medium text-white"
+          >
+            パスワードを再設定
+          </button>
+        </div>
+      </div>
     </main>
   );
 }

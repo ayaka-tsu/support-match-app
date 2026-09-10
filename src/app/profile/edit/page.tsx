@@ -12,6 +12,7 @@ const supabase = createClient();
 
 export default function EditProfilePage() {
   const [nickname, setNickname] = useState("");
+  const [nicknameError, setNicknameError] = useState("");
   const [email, setEmail] = useState("");
   const [originalEmail, setOriginalEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -28,6 +29,7 @@ export default function EditProfilePage() {
   );
   const [shouldDeleteAvatar, setShouldDeleteAvatar] = useState(false);
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+  const [isNewProfile, setIsNewProfile] = useState(false);
   const router = useRouter();
   useEffect(() => {
     const getUser = async () => {
@@ -50,6 +52,8 @@ export default function EditProfilePage() {
       }
 
       if (!profileData) {
+        setIsNewProfile(true);
+        setIsProfileLoaded(true);
         return;
       }
       setNickname(profileData.nickname);
@@ -125,6 +129,12 @@ export default function EditProfilePage() {
 
     if (!user) return;
 
+    if (!nickname.trim()) {
+      setNicknameError("ニックネームを入力してください");
+      return;
+    }
+
+    setNicknameError("");
     if (newPassword || confirmPassword) {
       if (newPassword.length < 8) {
         toast.error("新しいパスワードは8文字以上で入力してください");
@@ -239,6 +249,12 @@ export default function EditProfilePage() {
 
       <div className="mx-auto w-full max-w-md">
         <h1 className="page-title">プロフィール編集</h1>
+
+        {isNewProfile && (
+          <p className="mt-3 text-sm text-stone-600">
+            ご利用にはニックネームの設定が必要です。
+          </p>
+        )}
 
         <div className="mt-6 flex flex-col items-center">
           <div className="relative">
@@ -407,6 +423,10 @@ export default function EditProfilePage() {
               onChange={(e) => setNickname(e.target.value)}
               className="w-full rounded-xl border border-stone-300 bg-[#fffafa] px-4 py-3 text-stone-700"
             />
+
+            {nicknameError && (
+              <p className="mt-1.5 text-xs text-[#c96f6f]">{nicknameError}</p>
+            )}
           </div>
 
           <div>

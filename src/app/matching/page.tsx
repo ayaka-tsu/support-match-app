@@ -639,22 +639,21 @@ export default function MatchingPage() {
             >
               メッセージを開く
             </button>
-
-            <div className="mt-5 flex justify-center gap-3">
+            <div className="mt-5 flex flex-col items-center gap-3">
               <button
                 type="button"
-                onClick={() => setIsCancelConfirmOpen(true)}
-                className="button-interaction rounded-full border border-[#c96f6f] px-5 py-2 text-sm font-medium text-[#c96f6f]"
+                onClick={handleEndMatching}
+                className="button-interaction w-full max-w-xs rounded-full border border-[#b99191] bg-[#fffafa] px-5 py-2.5 font-medium text-[#9b7474]"
               >
-                キャンセル
+                マッチング終了
               </button>
 
               <button
                 type="button"
-                onClick={handleEndMatching}
-                className="button-interaction rounded-full border border-stone-300 bg-white/60 px-5 py-2 text-sm font-medium text-stone-600"
+                onClick={() => setIsCancelConfirmOpen(true)}
+                className="button-interaction rounded-full bg-[#fcf6f6] px-5 py-2 text-sm font-medium text-[#c96f6f]"
               >
-                マッチング終了
+                キャンセル
               </button>
             </div>
           </div>
