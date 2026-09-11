@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 見てて
 
-## Getting Started
+## アプリ概要
 
-First, run the development server:
+「ちょっと見てて、を気軽につなぐ」
+
+カフェやお店などで、少しだけ子どもの相手をしていてほしいときに、
+同じ場所にいる人どうしで、ほんの少し助け合えるようにつなぐアプリです。
+
+## 画面イメージ
+
+## デモ
+
+公開URL：https://support-match-app.vercel.app
+
+### テストアカウント
+
+メールアドレス：demo@mitete.test
+パスワード：MiteteDemo2026!
+
+## 主な機能
+
+- ユーザー登録・ログイン
+- プロフィール設定
+- 店舗の検索・選択
+- サポート依頼
+- 同じ場所にいる人とのマッチング
+- マッチング相手とのメッセージ
+- マッチングの終了・キャンセル
+- 新着メッセージやマッチング状況の通知表示
+
+## 使用技術
+
+- Next.js 16.3.1
+- React 19.2.8
+- TypeScript
+- Tailwind CSS 4
+- Supabase
+- Prisma 7.9.1
+- PostgreSQL
+- Vercel
+
+## ローカルでの実行方法
+
+```bash
+git clone https://github.com/ayaka-tsu/support-match-app.git
+cd support-match-app
+npm install
+```
+
+プロジェクト直下に `.env.local` を作成し、Supabase接続用の以下の項目を設定します。
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+```
+
+設定後、以下を実行します。
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで `http://localhost:3000` を開きます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 画面イメージ
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### トップ画面
 
-## Learn More
+![トップ画面](./public/readme-top.png)
 
-To learn more about Next.js, take a look at the following resources:
+### 店舗一覧
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+![店舗一覧](./public/readme-stores.png)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### メッセージ画面
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+![メッセージ画面](./public/readme-messages.png)

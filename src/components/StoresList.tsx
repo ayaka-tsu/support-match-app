@@ -36,6 +36,7 @@ export default function StoresList({ stores }: StoreListProps) {
   const searchParams = useSearchParams();
   const isReselecting = searchParams.get("reselect") === "true";
 
+  // 「店舗を選び直す」から戻った場合は前回の選択を消し、通常の店舗一覧URLへ戻す
   useEffect(() => {
     if (!isReselecting) return;
 
@@ -43,6 +44,7 @@ export default function StoresList({ stores }: StoreListProps) {
     router.replace("/stores");
   }, [isReselecting, router, setSelectedStore]);
 
+  // 画面表示時に、サポート依頼中・マッチング中かを確認して新しい店舗選択を制御する
   useEffect(() => {
     const checkActiveReruest = async () => {
       const {
@@ -150,6 +152,7 @@ export default function StoresList({ stores }: StoreListProps) {
     if (!selectedStore) return;
     router.push(`/support-requests?storeId=${selectedStore.id}`);
   };
+  // 店舗が一覧にない場合は重複を確認して追加し、その店舗を選択状態にする
   const handleAddStore = async () => {
     if (!newStoreName.trim()) {
       setAddStoreError("店舗名を入力してください");
@@ -182,6 +185,7 @@ export default function StoresList({ stores }: StoreListProps) {
     router.refresh();
   };
 
+  // 全角・半角などの表記ゆれをそろえて、店舗名・住所の部分一致検索に使う
   const normalizeText = (text: string) =>
     text.normalize("NFKC").trim().toLowerCase();
 
@@ -251,6 +255,7 @@ export default function StoresList({ stores }: StoreListProps) {
                   type="button"
                   disabled={isCheckingRequest}
                   onClick={() => {
+                    // 依頼中またはマッチング中は、別店舗を新しく選べない仕様にする
                     if (isRequesting || isMatching) {
                       setRequestMessage(
                         isMatching

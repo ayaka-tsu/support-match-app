@@ -41,6 +41,7 @@ export default function MessagesPage() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  // メッセージが追加されたら、常に最新メッセージまで自動でスクロールする
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -57,6 +58,7 @@ export default function MessagesPage() {
         matchingId && conversation.matchingIds.includes(matchingId),
     )?.avatarUrl ?? null;
 
+  // ログイン中のユーザーを取得し、サポートする側・依頼した側のどちらでも現在のマッチングを特定する
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -129,6 +131,7 @@ export default function MessagesPage() {
     });
   }, []);
 
+  // 過去を含むマッチングから会話相手ごとの履歴をまとめ、未読状態も含めて一覧を作成する
   useEffect(() => {
     const getConversations = async () => {
       if (!userId) return;
@@ -349,6 +352,7 @@ export default function MessagesPage() {
     getConversations();
   }, [userId]);
 
+  // マッチング中、または終了後1時間以内かを確認してメッセージ送信可否を決める
   useEffect(() => {
     const checkCanSendMessage = async () => {
       if (!matchingId) {
@@ -394,6 +398,7 @@ export default function MessagesPage() {
     checkCanSendMessage();
   }, [matchingId]);
 
+  // 選択中の相手との過去のマッチングをまとめて取得し、会話履歴を時系列で表示する
   useEffect(() => {
     const getMessages = async () => {
       if (!matchingId) return;
@@ -422,6 +427,7 @@ export default function MessagesPage() {
     getMessages();
   }, [matchingId, conversationNames]);
 
+  // 新着メッセージと既読更新をリアルタイムで受け取り、表示へ即時反映する
   useEffect(() => {
     if (!userId || !matchingId) return;
     const channel = supabase
@@ -492,6 +498,7 @@ export default function MessagesPage() {
       supabase.removeChannel(channel);
     };
   }, [matchingId, userId]);
+  // 開いた会話の相手から届いた未読メッセージを既読にし、通知状態も更新する
   useEffect(() => {
     if (!matchingId || !userId) return;
 
@@ -529,6 +536,7 @@ export default function MessagesPage() {
     markMessagesAsRead();
   }, [matchingId, userId, conversationNames]);
 
+  // 入力内容を現在のマッチングに紐づけて送信し、送信後に入力欄をリセットする
   const handleSend = async () => {
     if (!canSendMessage) return;
     if (!userId || !matchingId || !content.trim()) return;

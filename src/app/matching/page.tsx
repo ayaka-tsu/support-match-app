@@ -26,6 +26,7 @@ export default function MatchingPage() {
   );
   const router = useRouter();
 
+  // ログイン中のユーザーについて、サポートする側・依頼した側の両方から現在のマッチング状態を確認する
   useEffect(() => {
     const checkMatching = async () => {
       const {
@@ -258,6 +259,7 @@ export default function MatchingPage() {
     });
   }, []);
 
+  // 相手側がマッチングを終了した更新をリアルタイムで受け取り、画面へ即時反映する
   useEffect(() => {
     if (!matchingId) {
       return;
@@ -318,6 +320,7 @@ export default function MatchingPage() {
     };
   }, [matchingId]);
 
+  // マッチング相手のニックネームとプロフィール画像を取得して表示する
   useEffect(() => {
     if (!matchedUserId) {
       return;
@@ -341,6 +344,7 @@ export default function MatchingPage() {
     fetchMatchedProfile();
   }, [matchedUserId]);
 
+  // マッチング成立中は新たなサポート対象にならないよう、サポート可否を自動でOFFにする
   useEffect(() => {
     if (!isMatching) {
       return;
@@ -371,6 +375,7 @@ export default function MatchingPage() {
     turnOffSupport();
   }, [isMatching]);
 
+  // 利用者が手動でマッチングを終了し、終了時刻と終了したユーザーを記録する
   const handleEndMatching = async () => {
     if (!matchingId) {
       return;
@@ -401,6 +406,7 @@ export default function MatchingPage() {
     setIsEnded(true);
   };
 
+  // 手動終了後はお礼メッセージを表示し、3秒後にトップ画面へ戻す
   useEffect(() => {
     if (!isEnded) {
       return;
@@ -415,6 +421,7 @@ export default function MatchingPage() {
     };
   }, [isEnded, router]);
 
+  // マッチングをキャンセルし、誰がキャンセルしたかと終了時刻を保存する
   const handleCancelMatching = async () => {
     if (!matchingId) {
       return;
@@ -447,6 +454,7 @@ export default function MatchingPage() {
     setIsCanceled(true);
   };
 
+  // 相手からのキャンセル通知を確認済みにし、通知の赤丸を消す
   const handleCloseCanceledByOther = async () => {
     if (!matchingId) return;
 
@@ -466,6 +474,7 @@ export default function MatchingPage() {
     setIsCanceledByOther(false);
   };
 
+  // 相手からの終了通知を確認済みにし、通知の赤丸を消す
   const handleCloseEndedByOther = async () => {
     if (!matchingId) return;
 
@@ -486,6 +495,7 @@ export default function MatchingPage() {
     setIsEndedByOther(false);
   };
 
+  // マッチング成立通知を確認済みにし、サポートする側・依頼した側それぞれの確認時刻を保存する
   const handleCloseNewMatching = async () => {
     if (!matchingId) return;
 
@@ -521,6 +531,7 @@ export default function MatchingPage() {
     setIsNewMatching(false);
   };
 
+  // マッチング成立時刻を基準に1時間後を計算し、時間切れになったマッチングを自動終了する
   useEffect(() => {
     if (!isMatching || !matchingId || !matchingCreatedAt) {
       return;

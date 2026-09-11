@@ -31,6 +31,7 @@ export default function EditProfilePage() {
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
   const [isNewProfile, setIsNewProfile] = useState(false);
   const router = useRouter();
+  // profiles に行がない新規ユーザーでも編集画面を使えるよう、既存プロフィールは maybeSingle で取得する
   useEffect(() => {
     const getUser = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -51,6 +52,7 @@ export default function EditProfilePage() {
         return;
       }
 
+      // 初回利用で profiles がまだない場合は、新規プロフィールとしてそのまま入力画面を表示する
       if (!profileData) {
         setIsNewProfile(true);
         setIsProfileLoaded(true);
@@ -71,6 +73,7 @@ export default function EditProfilePage() {
     [],
   );
 
+  // 選択したプロフィール画像を指定範囲で切り抜き、アップロード用のJPEGファイルに作り直す
   const handleCropConfirm = useCallback(async () => {
     if (!cropImage || !croppedAreaPixels || !avatarFile) return;
 
@@ -129,6 +132,7 @@ export default function EditProfilePage() {
 
     if (!user) return;
 
+    // このアプリではニックネーム設定を必須としているため、未入力では保存させない
     if (!nickname.trim()) {
       setNicknameError("ニックネームを入力してください");
       return;
@@ -181,6 +185,7 @@ export default function EditProfilePage() {
       avatarUrl = publicUrlData.publicUrl;
     }
 
+    // 既存プロフィールは更新し、まだ profiles 行がない新規ユーザーは同じ処理で新規作成する
     const { error } = await supabase
       .from("profiles")
       .upsert({
@@ -200,6 +205,7 @@ export default function EditProfilePage() {
       return;
     }
 
+    // 画像を削除・変更した場合は、使わなくなった古い画像をStorageから削除する
     if (originalAvatarUrl && (shouldDeleteAvatar || avatarUrl)) {
       const oldAvatarPath = originalAvatarUrl.split("/avatars/")[1];
 

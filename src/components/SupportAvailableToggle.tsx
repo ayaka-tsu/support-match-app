@@ -20,8 +20,10 @@ export default function SupportAvailableToggle({
     initialSupportAvailable,
   );
 
+  // マッチング成立中は新しいサポート受付をしない仕様のため、表示上は必ずOFFとして扱う
   const displayedSupportAvailable = isMatching ? false : supportAvailable;
 
+  // サポート可能状態を画面上で先に切り替え、profiles の support_available に保存する
   const handleChange = async () => {
     const nextValue = !supportAvailable;
 
@@ -32,6 +34,7 @@ export default function SupportAvailableToggle({
       .update({ support_available: nextValue })
       .eq("id", userId);
 
+    // 保存に失敗した場合は、表示だけが先に切り替わった状態を元に戻す
     if (error) {
       console.error(error.message);
       setSupportAvailable(!nextValue);

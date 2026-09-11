@@ -9,6 +9,7 @@ export default async function Home() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  // ログイン済みユーザーは公開トップではなく、利用中の状態を確認できるダッシュボードへ進める
   if (user) {
     redirect("/dashboard");
   }

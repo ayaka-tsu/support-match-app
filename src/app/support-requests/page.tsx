@@ -20,6 +20,7 @@ export default function SupportRequestsPage() {
   const searchParams = useSearchParams();
   const storeId = searchParams.get("storeId");
 
+  // 画面表示時に、マッチング中か・直近30分以内のサポート依頼が残っているかを確認して表示状態を復元する
   useEffect(() => {
     let isCancelled = false;
 
@@ -129,6 +130,7 @@ export default function SupportRequestsPage() {
       isCancelled = true;
     };
   }, [setSelectedStore, storeId]);
+  // 選択中の店舗でサポート依頼を作成し、その直後に近くのサポーターとのマッチング判定を行う
   const handleConfirmRequest = async () => {
     const {
       data: { user },
@@ -155,6 +157,7 @@ export default function SupportRequestsPage() {
     await checkForMatching();
   };
 
+  // 最新のサポート依頼を削除して、依頼中の状態と選択店舗をリセットする
   const handleCancelRequest = async () => {
     const {
       data: { user },

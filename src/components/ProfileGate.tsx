@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 
+// ニックネーム未設定でも利用できる画面はプロフィール確認を通さず表示する
 const bypassPaths = [
   "/login",
   "/signup",
@@ -13,7 +14,7 @@ const bypassPaths = [
   "/forgot-password",
   "/reset-password",
   "/profile/edit",
-   "/concept",
+  "/concept",
 ];
 
 export default function ProfileGate({
@@ -27,6 +28,7 @@ export default function ProfileGate({
 
   const isBypassPath = bypassPaths.includes(pathname);
 
+  // ログイン済みユーザーのプロフィールを確認し、ニックネーム未設定ならプロフィール編集画面へ誘導する
   useEffect(() => {
     if (isBypassPath) return;
 
@@ -68,6 +70,7 @@ export default function ProfileGate({
     return <>{children}</>;
   }
 
+  // プロフィール確認が終わるまでは元の画面を描画せず、未設定画面が一瞬見えるのを防ぐ
   if (checkedPath !== pathname) {
     return null;
   }

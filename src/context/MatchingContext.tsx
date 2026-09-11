@@ -23,6 +23,7 @@ type MatchingContextValue = {
 };
 const MatchingContext = createContext<MatchingContextValue | null>(null);
 
+// どの画面からでも共通のマッチング判定を呼び出せるようにするためのカスタムフック
 export function useMatching() {
   const context = useContext(MatchingContext);
 
@@ -33,10 +34,12 @@ export function useMatching() {
   return context;
 }
 
+// 緯度・経度から2地点間の距離を計算するため、角度をラジアンへ変換する
 const toRadians = (value: number) => {
   return (value * Math.PI) / 180;
 };
 
+// 地球上の2地点間の距離を計算し、100m以内かどうかのマッチング判定に使う
 const getDistance = (
   lat1: number,
   lon1: number,
@@ -63,6 +66,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const positionRef = useRef<CurrentPosition | null>(null);
 
+  // 短時間に位置情報取得が繰り返されるため、30秒以内の取得結果は再利用する
   const getCurrentPosition = useCallback(async () => {
     const cachedPosition = positionRef.current;
 
@@ -87,6 +91,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
     return currentPosition;
   }, []);
 
+  // サポート依頼側・サポートする側の両方から、現在地を基準に成立可能なマッチングを探す
   const checkForMatching = useCallback(async () => {
     const {
       data: { session },
@@ -102,10 +107,12 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
 
     const user = session.user;
 
+    // サポート依頼は直近30分以内のものだけをマッチング対象として扱う
     const thirtyMinutesAgo = new Date(
       Date.now() - 30 * 60 * 1000,
     ).toISOString();
 
+    // 新規ユーザーは profiles 行がまだ存在しない場合があるため maybeSingle で取得する
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("support_available")
@@ -133,6 +140,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
     const hasOwnRequest = !!ownRequests && ownRequests.length > 0;
     const isSupportAvailable = profileData?.support_available === true;
 
+    // 依頼中でもサポート可能でもないユーザーは、位置情報取得やマッチング検索を行わない
     if (!hasOwnRequest && !isSupportAvailable) {
       return;
     }
@@ -152,7 +160,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
       currentPosition.capturedAt,
     ).toISOString();
 
-    // サポートする側なら、自分の現在地を profiles に更新
+    // サポートする側の位置は profiles に保存し、依頼者との100m判定に使う
     if (isSupportAvailable) {
       const { error: profileLocationError } = await supabase
         .from("profiles")
@@ -172,7 +180,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // サポート依頼を出した側なら、自分の依頼の現在地を更新
+    // サポート依頼側の位置は support_requests に保存し、サポーターとの100m判定に使う
     if (hasOwnRequest) {
       const activeRequest = ownRequests[0];
 
@@ -193,6 +201,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // 同じ依頼から複数のマッチングが作られないよう、既存マッチングの有無を先に確認する
       const { data: existingMatching, error: existingMatchingError } =
         await supabase
           .from("matchings")
@@ -220,6 +229,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        // 現在地から100m以内にいるサポート可能なユーザーをマッチング候補として選ぶ
         const nearbySupporter = supporters?.find((supporter) => {
           if (supporter.latitude === null || supporter.longitude === null) {
             return false;
@@ -246,6 +256,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
             });
 
           if (createMatchingError) {
+            // 同じマッチングが同時に2回作られそうになった場合は、2件目だけ作らない
             if (createMatchingError.code !== "23505") {
               console.error(
                 "matching create error:",
@@ -253,6 +264,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
               );
             }
           } else {
+            // 成立したサポーターは別の依頼と重複マッチングしないよう自動でサポートOFFにする
             const { error: supportOffError } = await supabase
               .from("profiles")
               .update({
@@ -270,7 +282,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // サポートする側からも、近くのサポート依頼を探す
+    // 依頼側の操作を待たず成立できるよう、サポートする側からも近くの依頼を探す
     if (isSupportAvailable) {
       const { data: requests, error: requestsError } = await supabase
         .from("support_requests")
@@ -309,6 +321,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
         ) ?? [],
       );
 
+      // まだ成立していない依頼のうち、現在地から100m以内のものをマッチング候補にする
       const nearbyRequest = requests.find((request) => {
         if (matchedRequestIds.has(request.id)) {
           return false;
@@ -342,12 +355,14 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
         });
 
       if (createMatchingError) {
+        // 同じマッチングが同時に2回作られそうになった場合は、2件目だけ作らない
         if (createMatchingError.code !== "23505") {
           console.error("matching create error:", createMatchingError.message);
         }
         return;
       }
 
+      // マッチング成立後は、新たな依頼と重複しないよう自分のサポート状態をOFFにする
       const { error: supportOffError } = await supabase
         .from("profiles")
         .update({
@@ -364,6 +379,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
     }
   }, [getCurrentPosition, router]);
 
+  // 画面遷移後すぐに判定し、その後も10秒ごとに再判定して成立状態を反映する
   useEffect(() => {
     void checkForMatching();
 
@@ -377,6 +393,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
     };
   }, [checkForMatching, pathname, router]);
 
+  // matchings テーブルの変更をリアルタイム購読し、相手側の成立・終了なども画面へ反映する
   useEffect(() => {
     const channel = supabase
       .channel("matching-dashboard-refresh")

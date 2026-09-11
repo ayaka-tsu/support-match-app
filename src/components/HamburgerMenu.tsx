@@ -15,6 +15,7 @@ export default function HamburgerMenu() {
   const [hasMessageNotification, setHasMessageNotification] = useState(false);
   const router = useRouter();
 
+  // マッチング成立・相手からのキャンセル・相手からの終了が未確認なら、マッチング通知マークを表示する
   useEffect(() => {
     const checkNotifications = async () => {
       const supabase = createClient();
@@ -184,6 +185,7 @@ export default function HamburgerMenu() {
     };
     checkNotifications();
 
+    // matchings の変更をリアルタイム購読し、成立・終了・キャンセルの通知状態をすぐ更新する
     const matchingChannel = supabase
       .channel("matching-notifications")
       .on(
@@ -214,6 +216,7 @@ export default function HamburgerMenu() {
     };
   }, []);
 
+  // 自分が参加した全マッチングの中から、相手が送った未読メッセージがあるか確認する
   useEffect(() => {
     const checkMessageNotifications = async () => {
       const supabase = createClient();
@@ -295,6 +298,7 @@ export default function HamburgerMenu() {
     };
   }, []);
 
+  // 新着メッセージをリアルタイム購読し、自分以外から届いたときだけ通知マークを付ける
   useEffect(() => {
     if (!user) return;
 
