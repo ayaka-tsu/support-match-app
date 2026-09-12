@@ -7,16 +7,21 @@
 カフェやお店などで、少しだけ子どもの相手をしていてほしいときに、
 同じ場所にいる人どうしで、ほんの少し助け合えるようにつなぐアプリです。
 
-## 画面イメージ
-
 ## デモ
 
 公開URL：https://support-match-app.vercel.app
 
-### テストアカウント
+## デモアカウント
 
-メールアドレス：demo@mitete.test
-パスワード：MiteteDemo2026!
+### デモユーザー1
+
+- メールアドレス: demo@mitete.test
+- パスワード: MiteteDemo2026!
+
+### デモユーザー2
+
+- メールアドレス: demo2@mitete.test
+- パスワード: MiteteDemo2026!
 
 ## 主な機能
 
@@ -40,6 +45,10 @@
 - PostgreSQL
 - Vercel
 
+## 外部サービス・API
+
+- Supabase：認証、データベース、ストレージ、リアルタイム通信に使用
+
 ## 必須環境
 
 - Node.js 20系
@@ -56,8 +65,8 @@ npm install
 プロジェクト直下に `.env.local` を作成し、Supabase接続用の以下の項目を設定します。
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
 設定後、以下を実行します。
