@@ -40,6 +40,11 @@
 - PostgreSQL
 - Vercel
 
+## 必須環境
+
+- Node.js 20系
+- npm
+
 ## ローカルでの実行方法
 
 ```bash
