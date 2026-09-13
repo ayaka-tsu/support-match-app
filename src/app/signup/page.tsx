@@ -22,7 +22,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        emailRedirectTo: "http://localhost:3000/signup-complete",
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/signup-complete`,
       },
     });
 
