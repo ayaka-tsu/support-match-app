@@ -25,6 +25,7 @@ model Store {
   id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name             String
   address          String?
+  sort_order       BigInt           @unique @default(autoincrement())
   support_requests SupportRequest[]
 
   @@map("stores")

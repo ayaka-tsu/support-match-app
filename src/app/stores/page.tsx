@@ -7,8 +7,8 @@ export default async function StoresPage() {
 
   const { data: stores, error } = await supabase
     .from("stores")
-    .select("id, name, address");
-
+    .select("id, name, address")
+    .order("sort_order", { ascending: true });
   if (error) {
     console.error("stores fetch error:", error.message);
   }
