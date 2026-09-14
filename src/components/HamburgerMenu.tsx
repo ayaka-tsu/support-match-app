@@ -12,6 +12,8 @@ export default function HamburgerMenu() {
   const [user, setUser] = useState<User | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [hasNotification, setHasNotification] = useState(false);
+  const [hasExpiredRequestNotification, setHasExpiredRequestNotification] =
+    useState(false);
   const [hasMessageNotification, setHasMessageNotification] = useState(false);
   const router = useRouter();
 
@@ -328,6 +330,167 @@ export default function HamburgerMenu() {
     };
   }, [user]);
 
+  // 30分以内にマッチングしなかったサポート依頼が未確認なら通知マークを表示する
+  useEffect(() => {
+    let timeoutId: number | null = null;
+    let isCancelled = false;
+
+    const checkExpiredRequestNotification = async () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (isCancelled) return;
+
+      if (!user) {
+        setHasExpiredRequestNotification(false);
+        return;
+      }
+
+      const { data: requests, error: requestError } = await supabase
+        .from("support_requests")
+        .select("id, created_at")
+        .eq("user_id", user.id)
+        .is("expired_seen_at", null)
+        .order("created_at", { ascending: true });
+
+      if (requestError) {
+        console.error(
+          "expired request notification check error:",
+          requestError.message,
+        );
+        return;
+      }
+
+      if (!requests || requests.length === 0) {
+        setHasExpiredRequestNotification(false);
+        return;
+      }
+
+      const requestIds = requests.map((request) => request.id);
+
+      const { data: matchingData, error: matchingError } = await supabase
+        .from("matchings")
+        .select("support_request_id")
+        .in("support_request_id", requestIds);
+
+      if (matchingError) {
+        console.error(
+          "expired request matching check error:",
+          matchingError.message,
+        );
+        return;
+      }
+
+      const matchedRequestIds = new Set(
+        matchingData?.map((matching) => matching.support_request_id) ?? [],
+      );
+
+      const unmatchedRequests = requests.filter(
+        (request) => !matchedRequestIds.has(request.id),
+      );
+
+      const now = Date.now();
+      const thirtyMinutes = 30 * 60 * 1000;
+
+      const hasExpiredRequest = unmatchedRequests.some(
+        (request) =>
+          now >= new Date(request.created_at).getTime() + thirtyMinutes,
+      );
+
+      setHasExpiredRequestNotification(hasExpiredRequest);
+
+      if (hasExpiredRequest) {
+        window.dispatchEvent(new Event("support-request-expired"));
+      }
+
+      if (hasExpiredRequest) return;
+
+      const nextExpirationTimes = unmatchedRequests
+        .map(
+          (request) => new Date(request.created_at).getTime() + thirtyMinutes,
+        )
+        .filter((expirationTime) => expirationTime > now);
+
+      if (nextExpirationTimes.length === 0) return;
+
+      const nextExpirationTime = Math.min(...nextExpirationTimes);
+
+      timeoutId = window.setTimeout(
+        () => {
+          checkExpiredRequestNotification();
+        },
+        nextExpirationTime - now + 100,
+      );
+    };
+
+    const handleExpiredRequestNotificationRead = () => {
+      checkExpiredRequestNotification();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkExpiredRequestNotification();
+      }
+    };
+
+    checkExpiredRequestNotification();
+
+    const channel = supabase
+      .channel("support-request-expiration-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_requests",
+        },
+        () => {
+          checkExpiredRequestNotification();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "matchings",
+        },
+        () => {
+          checkExpiredRequestNotification();
+        },
+      )
+      .subscribe();
+
+    window.addEventListener(
+      "support-request-notification-read",
+      handleExpiredRequestNotificationRead,
+    );
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isCancelled = true;
+
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+
+      supabase.removeChannel(channel);
+
+      window.removeEventListener(
+        "support-request-notification-read",
+        handleExpiredRequestNotificationRead,
+      );
+
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
@@ -357,7 +520,9 @@ export default function HamburgerMenu() {
       >
         <span className="h-0.5 w-6 rounded-full bg-[#b99191]" />
         <span className="h-0.5 w-4 rounded-full bg-[#b99191]" />
-        {(hasNotification || hasMessageNotification) && (
+        {(hasNotification ||
+          hasMessageNotification ||
+          hasExpiredRequestNotification) && (
           <span className="absolute right-[-2px] top-0 h-2 w-2 rounded-full bg-[#c96f6f]" />
         )}
       </button>
@@ -442,7 +607,12 @@ export default function HamburgerMenu() {
                   onClick={() => setIsOpen(false)}
                   className="menu-item"
                 >
-                  <span>サポート依頼</span>
+                  <span className="flex items-center gap-2">
+                    サポート依頼
+                    {hasExpiredRequestNotification && (
+                      <span className="h-2 w-2 rounded-full bg-[#c96f6f]" />
+                    )}
+                  </span>
                   <span className="text-xl">›</span>
                 </Link>
 

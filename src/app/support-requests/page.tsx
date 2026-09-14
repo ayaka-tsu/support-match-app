@@ -16,6 +16,7 @@ export default function SupportRequestsPage() {
   const [isRequesting, setIsRequesting] = useState(false);
   const [isCheckingRequest, setIsCheckingRequest] = useState(true);
   const [isMatching, setIsMatching] = useState(false);
+  const [expiredRequestIds, setExpiredRequestIds] = useState<string[]>([]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const storeId = searchParams.get("storeId");
@@ -130,6 +131,150 @@ export default function SupportRequestsPage() {
       isCancelled = true;
     };
   }, [setSelectedStore, storeId]);
+
+  // 30分以内にマッチングしなかった未確認のサポート依頼を確認する
+  useEffect(() => {
+    let timeoutId: number | null = null;
+    let isCancelled = false;
+
+    const checkExpiredRequests = async () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (isCancelled || !user) return;
+
+      const { data: requests, error: requestError } = await supabase
+        .from("support_requests")
+        .select("id, created_at")
+        .eq("user_id", user.id)
+        .is("expired_seen_at", null)
+        .order("created_at", { ascending: true });
+
+      if (requestError) {
+        console.error("expired request check error:", requestError.message);
+        return;
+      }
+
+      if (!requests || requests.length === 0) {
+        setExpiredRequestIds([]);
+        return;
+      }
+
+      const requestIds = requests.map((request) => request.id);
+
+      const { data: matchingData, error: matchingError } = await supabase
+        .from("matchings")
+        .select("support_request_id")
+        .in("support_request_id", requestIds);
+
+      if (matchingError) {
+        console.error(
+          "expired request matching check error:",
+          matchingError.message,
+        );
+        return;
+      }
+
+      const matchedRequestIds = new Set(
+        matchingData?.map((matching) => matching.support_request_id) ?? [],
+      );
+
+      const unmatchedRequests = requests.filter(
+        (request) => !matchedRequestIds.has(request.id),
+      );
+
+      const now = Date.now();
+      const thirtyMinutes = 30 * 60 * 1000;
+
+      const expiredIds = unmatchedRequests
+        .filter(
+          (request) =>
+            now >= new Date(request.created_at).getTime() + thirtyMinutes,
+        )
+        .map((request) => request.id);
+
+      setExpiredRequestIds(expiredIds);
+
+      if (expiredIds.length > 0) return;
+
+      const nextExpirationTimes = unmatchedRequests
+        .map(
+          (request) => new Date(request.created_at).getTime() + thirtyMinutes,
+        )
+        .filter((expirationTime) => expirationTime > now);
+
+      if (nextExpirationTimes.length === 0) return;
+
+      const nextExpirationTime = Math.min(...nextExpirationTimes);
+
+      timeoutId = window.setTimeout(
+        () => {
+          checkExpiredRequests();
+        },
+        nextExpirationTime - now + 100,
+      );
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkExpiredRequests();
+      }
+    };
+
+    checkExpiredRequests();
+
+    const channel = supabase
+      .channel("support-request-expiration-page")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_requests",
+        },
+        () => {
+          checkExpiredRequests();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "matchings",
+        },
+        () => {
+          checkExpiredRequests();
+        },
+      )
+      .subscribe();
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("support-request-expired", checkExpiredRequests);
+
+    return () => {
+      isCancelled = true;
+
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+
+      supabase.removeChannel(channel);
+
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener(
+        "support-request-expired",
+        checkExpiredRequests,
+      );
+    };
+  }, []);
+
   // 選択中の店舗でサポート依頼を作成し、その直後に近くのサポーターとのマッチング判定を行う
   const handleConfirmRequest = async () => {
     const {
@@ -192,6 +337,54 @@ export default function SupportRequestsPage() {
     setSelectedStore(null);
   };
 
+  const handleCloseExpiredRequest = async () => {
+    if (expiredRequestIds.length === 0) return;
+
+    const { error } = await supabase
+      .from("support_requests")
+      .update({
+        expired_seen_at: new Date().toISOString(),
+      })
+      .in("id", expiredRequestIds);
+
+    if (error) {
+      console.error("expired request seen update error:", error.message);
+      return;
+    }
+
+    setExpiredRequestIds([]);
+    setIsRequesting(false);
+    setSelectedStore(null);
+
+    window.dispatchEvent(new Event("support-request-notification-read"));
+  };
+
+  const expiredRequestModal =
+    expiredRequestIds.length > 0 ? (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-6">
+        <div className="relative w-full max-w-sm rounded-3xl bg-[#fbf5f3] p-6 text-center shadow-xl">
+          <p className="leading-7 text-stone-700">
+            サポートできる方が
+            <br />
+            見つかりませんでした
+          </p>
+
+          <p className="mt-3 text-sm leading-6 text-stone-500">
+            サポート依頼を終了しました
+          </p>
+
+          <button
+            type="button"
+            onClick={handleCloseExpiredRequest}
+            className="absolute right-4 top-3 text-2xl text-stone-500"
+            aria-label="閉じる"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    ) : null;
+
   if (isCheckingRequest) {
     return (
       <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
@@ -224,6 +417,7 @@ export default function SupportRequestsPage() {
     return (
       <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
         <HamburgerMenu />
+        {expiredRequestModal}
 
         <div className="mx-auto w-full max-w-2xl">
           <h1 className="page-title">サポート依頼</h1>

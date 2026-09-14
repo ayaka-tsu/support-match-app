@@ -40,6 +40,7 @@ model SupportRequest {
   latitude            Float?
   longitude           Float?
   location_updated_at DateTime? @db.Timestamptz(6)
+  expired_seen_at     DateTime? @db.Timestamptz(6)
   matching            Matching?
   store               Store     @relation(fields: [store_id], references: [id])
 
