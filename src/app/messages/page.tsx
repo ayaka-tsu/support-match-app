@@ -704,7 +704,9 @@ export default function MessagesPage() {
                 </div>
               )}
 
-              <p className="text-stone-600">{selectedNickname}</p>
+              <p className="min-w-0 flex-1 truncate whitespace-nowrap text-stone-600">
+                {selectedNickname}
+              </p>
             </div>
           )}
           {isWithinMessageGracePeriod && messageAvailableUntil && (
@@ -773,12 +775,6 @@ export default function MessagesPage() {
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-sm font-medium text-white">
                                 {selectedNickname?.charAt(0).toUpperCase()}
                               </div>
-                            )}
-
-                            {selectedNickname && (
-                              <p className="mt-1 max-w-14 truncate text-[10px] text-stone-500">
-                                {selectedNickname}
-                              </p>
                             )}
                           </div>
 
