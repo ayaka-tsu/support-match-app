@@ -200,7 +200,6 @@ export default function MatchingPage() {
       }
 
       if (!matchingData || matchingData.length === 0) {
-        console.log("requestIds:", requestIds);
         const { data: canceledMatchingData, error: canceledMatchingError } =
           await supabase
             .from("matchings")
