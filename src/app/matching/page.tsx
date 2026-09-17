@@ -259,6 +259,118 @@ export default function MatchingPage() {
     });
   }, []);
 
+  // 新しいマッチング成立をリアルタイムで受け取り、画面へ即時反映する
+  useEffect(() => {
+    let matchingChannel: ReturnType<typeof supabase.channel> | null = null;
+    let isCanceled = false;
+
+    const subscribeToNewMatching = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user || isCanceled) {
+        return;
+      }
+
+      matchingChannel = supabase
+        .channel(`matching-created-${user.id}-${Date.now()}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "matchings",
+          },
+          (payload) => {
+            const newMatching = payload.new as {
+              id: string;
+              support_request_id: string;
+              supporter_id: string;
+              status: string;
+              created_at: string;
+              supporter_seen_at?: string | null;
+              requester_seen_at?: string | null;
+            };
+
+            const handleNewMatching = async () => {
+              if (newMatching.status !== "active") {
+                return;
+              }
+
+              if (newMatching.supporter_id === user.id) {
+                const { data: requestData, error: requestError } =
+                  await supabase
+                    .from("support_requests")
+                    .select("user_id")
+                    .eq("id", newMatching.support_request_id)
+                    .single();
+
+                if (requestError) {
+                  console.error(
+                    "new matching request error:",
+                    requestError.message,
+                  );
+                  return;
+                }
+
+                setIsMatching(true);
+                setMatchingCreatedAt(newMatching.created_at);
+                setMatchingId(newMatching.id);
+                setMatchedUserId(requestData.user_id);
+
+                if (!newMatching.supporter_seen_at) {
+                  setIsNewMatching(true);
+                }
+
+                return;
+              }
+
+              const { data: requestData, error: requestError } = await supabase
+                .from("support_requests")
+                .select("user_id")
+                .eq("id", newMatching.support_request_id)
+                .single();
+
+              if (requestError) {
+                console.error(
+                  "new matching requester check error:",
+                  requestError.message,
+                );
+                return;
+              }
+
+              if (requestData.user_id !== user.id) {
+                return;
+              }
+
+              setIsMatching(true);
+              setMatchingCreatedAt(newMatching.created_at);
+              setMatchingId(newMatching.id);
+              setMatchedUserId(newMatching.supporter_id);
+
+              if (!newMatching.requester_seen_at) {
+                setIsNewMatching(true);
+              }
+            };
+
+            void handleNewMatching();
+          },
+        )
+        .subscribe();
+    };
+
+    void subscribeToNewMatching();
+
+    return () => {
+      isCanceled = true;
+
+      if (matchingChannel) {
+        supabase.removeChannel(matchingChannel);
+      }
+    };
+  }, []);
+
   // 相手側がマッチングを終了した更新をリアルタイムで受け取り、画面へ即時反映する
   useEffect(() => {
     if (!matchingId) {
@@ -314,6 +426,62 @@ export default function MatchingPage() {
     });
 
     return () => {
+      if (matchingChannel) {
+        supabase.removeChannel(matchingChannel);
+      }
+    };
+  }, [matchingId]);
+
+  // 相手側のキャンセルをリアルタイムで受け取り、画面へ即時反映する
+  useEffect(() => {
+    let matchingChannel: ReturnType<typeof supabase.channel> | null = null;
+    let isCanceled = false;
+
+    const subscribeToMatchingCancel = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user || isCanceled || !matchingId) {
+        return;
+      }
+
+      matchingChannel = supabase
+        .channel(`matching-cancel-${matchingId}-${Date.now()}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "matchings",
+            filter: `id=eq.${matchingId}`,
+          },
+          (payload) => {
+            const updatedMatching = payload.new as {
+              status?: string;
+              canceled_by?: string | null;
+              canceled_seen_at?: string | null;
+            };
+
+            if (
+              updatedMatching.status === "canceled" &&
+              updatedMatching.canceled_by &&
+              updatedMatching.canceled_by !== user.id &&
+              !updatedMatching.canceled_seen_at
+            ) {
+              setIsMatching(false);
+              setIsCanceledByOther(true);
+            }
+          },
+        )
+        .subscribe();
+    };
+
+    void subscribeToMatchingCancel();
+
+    return () => {
+      isCanceled = true;
+
       if (matchingChannel) {
         supabase.removeChannel(matchingChannel);
       }
