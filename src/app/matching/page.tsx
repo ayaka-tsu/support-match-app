@@ -12,6 +12,7 @@ export default function MatchingPage() {
   const [isMatching, setIsMatching] = useState(false);
   const [matchedUserId, setMatchedUserId] = useState<string | null>(null);
   const [matchedNickname, setMatchedNickname] = useState("");
+  const [matchedStoreName, setMatchedStoreName] = useState("");
   const [matchedAvatarUrl, setMatchedAvatarUrl] = useState<string | null>(null);
   const [matchingId, setMatchingId] = useState<string | null>(null);
   const [isEnded, setIsEnded] = useState(false);
@@ -71,7 +72,7 @@ export default function MatchingPage() {
         const { data: matchedRequest, error: matchedRequestError } =
           await supabase
             .from("support_requests")
-            .select("user_id")
+            .select("user_id, store_id")
             .eq("id", data[0].support_request_id)
             .single();
 
@@ -343,6 +344,52 @@ export default function MatchingPage() {
     fetchMatchedProfile();
   }, [matchedUserId]);
 
+  // マッチングに紐づく店舗名を取得して表示する
+  useEffect(() => {
+    if (!matchingId) {
+      return;
+    }
+
+    const fetchMatchedStore = async () => {
+      const { data: matchingData, error: matchingError } = await supabase
+        .from("matchings")
+        .select("support_request_id")
+        .eq("id", matchingId)
+        .single();
+
+      if (matchingError) {
+        console.error("matched store matching error:", matchingError.message);
+        return;
+      }
+
+      const { data: requestData, error: requestError } = await supabase
+        .from("support_requests")
+        .select("store_id")
+        .eq("id", matchingData.support_request_id)
+        .single();
+
+      if (requestError) {
+        console.error("matched store request error:", requestError.message);
+        return;
+      }
+
+      const { data: storeData, error: storeError } = await supabase
+        .from("stores")
+        .select("name")
+        .eq("id", requestData.store_id)
+        .single();
+
+      if (storeError) {
+        console.error("matched store error:", storeError.message);
+        return;
+      }
+
+      setMatchedStoreName(storeData.name);
+    };
+
+    fetchMatchedStore();
+  }, [matchingId]);
+
   // マッチング成立中は新たなサポート対象にならないよう、サポート可否を自動でOFFにする
   useEffect(() => {
     if (!isMatching) {
@@ -598,6 +645,7 @@ export default function MatchingPage() {
                   alt={`${matchedNickname}のプロフィール画像`}
                   width={80}
                   height={80}
+                  unoptimized
                   className="h-20 w-20 rounded-full object-cover"
                 />
               ) : (
@@ -611,6 +659,12 @@ export default function MatchingPage() {
               <p className="mt-3 text-lg font-medium text-stone-700">
                 {matchedNickname}
               </p>
+
+              {matchedStoreName && (
+                <p className="mt-2 text-sm text-stone-500">
+                  店舗名：{matchedStoreName}
+                </p>
+              )}
             </div>
 
             <div className="mt-7 rounded-2xl border border-stone-200 bg-white/70 px-5 py-5">
@@ -720,6 +774,12 @@ export default function MatchingPage() {
               {matchedNickname && (
                 <p className="mt-2 text-sm text-stone-500">
                   {matchedNickname}さんとマッチングしました
+                </p>
+              )}
+
+              {matchedStoreName && (
+                <p className="mt-2 text-sm text-stone-500">
+                  店舗名：{matchedStoreName}
                 </p>
               )}
             </div>
