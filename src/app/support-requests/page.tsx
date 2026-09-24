@@ -488,11 +488,15 @@ export default function SupportRequestsPage() {
           {isConfirming && (
             <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-6">
               <div className="w-full max-w-sm rounded-3xl bg-[#fbf5f3] p-6 shadow-xl">
-                <p className="text-center leading-7 text-stone-700">
-                  {selectedStore.name}で
-                  <br />
-                  サポートを依頼しますか？
+                <p className="text-center font-medium text-stone-700">
+                  {selectedStore.name}で サポートを依頼しますか？
                 </p>
+                <div className="mt-5 rounded-xl border border-[#ead3d3] bg-[#fbf5f3] px-3 py-2">
+                  <p className="whitespace-nowrap text-[13px] text-stone-600">
+                    <span className="mr-1 text-[10px]">※</span>
+                    サポート相手を探すため、位置情報を使用します。
+                  </p>
+                </div>
 
                 <div className="mt-6 flex justify-center gap-3">
                   <button
