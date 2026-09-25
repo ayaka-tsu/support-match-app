@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import HamburgerMenu from "@/components/HamburgerMenu";
 import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 const supabase = createClient();
 
@@ -234,11 +234,13 @@ export default function EditProfilePage() {
     if (email !== originalEmail) {
       if (newPassword) {
         toast.success(
-          "プロフィールとパスワードを更新しました。メールアドレスの変更は確認メールから完了してください",
+          "プロフィールとパスワードを更新しました。\nメールアドレスの変更は確認メールから完了してください。",
+          { duration: 5000 },
         );
       } else {
         toast.success(
-          "プロフィールを更新しました。メールアドレスの変更は確認メールから完了してください",
+          "プロフィールを更新しました。\nメールアドレスの変更は確認メールから完了してください。",
+          { duration: 5000 },
         );
       }
     } else if (newPassword) {
@@ -246,7 +248,6 @@ export default function EditProfilePage() {
     } else {
       toast.success("プロフィールを更新しました");
     }
-
     router.push("/profile");
   };
   return (

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 const supabase = createClient();
 

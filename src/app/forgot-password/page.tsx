@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 

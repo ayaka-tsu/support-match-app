@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 const supabase = createClient();
 
@@ -87,47 +87,44 @@ export default function SignupPage() {
             </p>
           </div>
 
-
           <div>
-  <label className="flex items-start gap-2 text-sm text-stone-600">
-    <input
-      type="checkbox"
-      checked={isAgreed}
-      onChange={(e) => {
-        setIsAgreed(e.target.checked);
-        if (e.target.checked) {
-          setAgreementError("");
-        }
-      }}
-      className="mt-1 h-4 w-4 accent-[#d9a3a3]"
-    />
+            <label className="flex items-start gap-2 text-sm text-stone-600">
+              <input
+                type="checkbox"
+                checked={isAgreed}
+                onChange={(e) => {
+                  setIsAgreed(e.target.checked);
+                  if (e.target.checked) {
+                    setAgreementError("");
+                  }
+                }}
+                className="mt-1 h-4 w-4 accent-[#d9a3a3]"
+              />
 
-    <span>
-      <Link
-        href="/terms"
-        target="_blank"
-        className="text-[#a97d7d] underline underline-offset-4"
-      >
-        利用規約
-      </Link>
-      と
-      <Link
-        href="/privacy"
-        target="_blank"
-        className="text-[#a97d7d] underline underline-offset-4"
-      >
-        プライバシーポリシー
-      </Link>
-      に同意します
-    </span>
-  </label>
+              <span>
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  className="text-[#a97d7d] underline underline-offset-4"
+                >
+                  利用規約
+                </Link>
+                と
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  className="text-[#a97d7d] underline underline-offset-4"
+                >
+                  プライバシーポリシー
+                </Link>
+                に同意します
+              </span>
+            </label>
 
-  {agreementError && (
-    <p className="mt-1.5 text-xs text-red-500">
-      {agreementError}
-    </p>
-  )}
-</div>
+            {agreementError && (
+              <p className="mt-1.5 text-xs text-red-500">{agreementError}</p>
+            )}
+          </div>
 
           <button
             type="submit"

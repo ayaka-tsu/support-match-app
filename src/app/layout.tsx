@@ -4,7 +4,7 @@ import { StoreProvider } from "@/context/StoreContext";
 import "./globals.css";
 import Link from "next/link";
 import Image from "next/image";
-import { Toaster } from "sonner";
+import { Toaster } from "react-hot-toast";
 import { MatchingProvider } from "@/context/MatchingContext";
 import ProfileGate from "@/components/ProfileGate";
 
@@ -45,7 +45,30 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <ProfileGate>{children}</ProfileGate>
           </MatchingProvider>
         </StoreProvider>
-        <Toaster position="top-center" richColors />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: "#fffafa",
+              color: "#57534e",
+              border: "1px solid #e7caca",
+              maxWidth: "520px",
+              whiteSpace: "pre-line",
+            },
+            success: {
+              iconTheme: {
+                primary: "#d9a3a3",
+                secondary: "#fffafa",
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: "#c98f98",
+                secondary: "#fffafa",
+              },
+            },
+          }}
+        />
       </body>
     </html>
   );

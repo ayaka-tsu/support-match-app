@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
@@ -30,7 +30,8 @@ export default function ResetPasswordPage() {
     if (error) {
       if (error.code === "same_password") {
         toast.error(
-          "以前と同じパスワードは設定できません。別のパスワードを入力してください",
+          "以前と同じパスワードは設定できません。\n別のパスワードを入力してください",
+          { duration: 5000 },
         );
       } else {
         toast.error("パスワードを再設定できませんでした");
