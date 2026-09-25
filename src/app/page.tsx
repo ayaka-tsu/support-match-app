@@ -76,8 +76,19 @@ export default async function Home() {
         </Link>
         <footer className="mt-4 text-center text-xs text-stone-500">
           <div className="mb-2 flex justify-center gap-4">
-            <Link href="/terms">利用規約</Link>
-            <Link href="/privacy">プライバシーポリシー</Link>
+            <Link
+              href="/terms"
+              className="underline underline-offset-4 transition-colors hover:text-[#a97d7d]"
+            >
+              利用規約
+            </Link>
+
+            <Link
+              href="/privacy"
+              className="underline underline-offset-4 transition-colors hover:text-[#a97d7d]"
+            >
+              プライバシーポリシー
+            </Link>
           </div>
 
           <p>© 2026 見てて</p>
