@@ -233,11 +233,12 @@ export default function MessagesPage() {
           ...(matchingData?.map((matching) => matching.supporter_id) ?? []),
           ...(supportRequestData?.map((request) => request.user_id) ?? []),
         ];
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id, nickname, avatar_url")
-          .in("id", userIds);
-
+        const { data: profileData, error: profileError } = await supabase.rpc(
+          "get_visible_profiles",
+          {
+            target_user_ids: userIds,
+          },
+        );
         if (profileError) {
           console.error("conversation profile error:", profileError.message);
           return;
@@ -303,9 +304,12 @@ export default function MessagesPage() {
           if (!otherUserId) return;
 
           const profile = profileData?.find(
-            (profile) => profile.id === otherUserId,
+            (profile: {
+              id: string;
+              nickname: string | null;
+              avatar_url: string | null;
+            }) => profile.id === otherUserId,
           );
-
           const existingConversation = conversationMap.get(otherUserId);
 
           if (existingConversation) {
@@ -459,14 +463,10 @@ export default function MessagesPage() {
 
             return [...prevMessages, newMessage];
           });
-
-          await supabase
-            .from("messages")
-            .update({
-              read_at: new Date().toISOString(),
-            })
-            .eq("id", newMessage.id)
-            .is("read_at", null);
+          await supabase.rpc("mark_messages_read", {
+            target_matching_ids: [newMessage.matching_id],
+            target_message_id: newMessage.id,
+          });
         },
       )
       .on(
@@ -509,15 +509,10 @@ export default function MessagesPage() {
     if (!selectedConversation || !selectedConversation.hasUnread) return;
 
     const markMessagesAsRead = async () => {
-      const { error } = await supabase
-        .from("messages")
-        .update({
-          read_at: new Date().toISOString(),
-        })
-        .in("matching_id", selectedConversation.matchingIds)
-        .neq("sender_id", userId)
-        .is("read_at", null);
-
+      const { error } = await supabase.rpc("mark_messages_read", {
+        target_matching_ids: selectedConversation.matchingIds,
+        target_message_id: null,
+      });
       if (error) {
         console.error("message read error:", error.message);
         return;
@@ -628,15 +623,10 @@ export default function MessagesPage() {
 
                     if (!userId) return;
 
-                    const { error } = await supabase
-                      .from("messages")
-                      .update({
-                        read_at: new Date().toISOString(),
-                      })
-                      .in("matching_id", conversation.matchingIds)
-                      .neq("sender_id", userId)
-                      .is("read_at", null);
-
+                    const { error } = await supabase.rpc("mark_messages_read", {
+                      target_matching_ids: conversation.matchingIds,
+                      target_message_id: null,
+                    });
                     if (error) {
                       console.error("message read error:", error.message);
                     }

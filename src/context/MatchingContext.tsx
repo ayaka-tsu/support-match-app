@@ -34,33 +34,6 @@ export function useMatching() {
   return context;
 }
 
-// 緯度・経度から2地点間の距離を計算するため、角度をラジアンへ変換する
-const toRadians = (value: number) => {
-  return (value * Math.PI) / 180;
-};
-
-// 地球上の2地点間の距離を計算し、100m以内かどうかのマッチング判定に使う
-const getDistance = (
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-) => {
-  const R = 6371000;
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) ** 2;
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-};
-
 export function MatchingProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -218,45 +191,34 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!existingMatching) {
-        const { data: supporters, error: supportersError } = await supabase
-          .from("profiles")
-          .select("id, latitude, longitude, location_updated_at")
-          .eq("support_available", true)
-          .neq("id", user.id);
+        const { data: nearbySupporterId, error: supportersError } =
+          await supabase.rpc("find_nearby_supporter", {
+            current_latitude: currentLatitude,
+            current_longitude: currentLongitude,
+          });
 
         if (supportersError) {
           console.error("supporters check error:", supportersError.message);
           return;
         }
 
-        // 現在地から100m以内にいるサポート可能なユーザーをマッチング候補として選ぶ
-        const nearbySupporter = supporters?.find((supporter) => {
-          if (supporter.latitude === null || supporter.longitude === null) {
-            return false;
-          }
-
-          const distance = getDistance(
-            currentLatitude,
-            currentLongitude,
-            supporter.latitude,
-            supporter.longitude,
-          );
-
-          return distance <= 100;
-        });
-
+        const nearbySupporter = nearbySupporterId
+          ? { id: nearbySupporterId }
+          : null;
         if (nearbySupporter) {
-          const { error: createMatchingError } = await supabase
-            .from("matchings")
-            .insert({
-              support_request_id: activeRequest.id,
-              supporter_id: nearbySupporter.id,
-              status: "active",
-              updated_at: new Date().toISOString(),
-            });
+          const { data: createdMatching, error: createMatchingError } =
+            await supabase
+              .from("matchings")
+              .insert({
+                support_request_id: activeRequest.id,
+                supporter_id: nearbySupporter.id,
+                status: "active",
+                updated_at: new Date().toISOString(),
+              })
+              .select("id")
+              .single();
 
           if (createMatchingError) {
-            // 同じマッチングが同時に2回作られそうになった場合は、2件目だけ作らない
             if (createMatchingError.code !== "23505") {
               console.error(
                 "matching create error:",
@@ -264,16 +226,16 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
               );
             }
           } else {
-            // 成立したサポーターは別の依頼と重複マッチングしないよう自動でサポートOFFにする
-            const { error: supportOffError } = await supabase
-              .from("profiles")
-              .update({
-                support_available: false,
-              })
-              .eq("id", nearbySupporter.id);
+            const { error: supportOffError } = await supabase.rpc(
+              "set_matched_supporter_unavailable",
+              {
+                target_matching_id: createdMatching.id,
+              },
+            );
 
             if (supportOffError) {
               console.error("support off error:", supportOffError.message);
+              return;
             }
 
             router.refresh();
@@ -284,63 +246,18 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
 
     // 依頼側の操作を待たず成立できるよう、サポートする側からも近くの依頼を探す
     if (isSupportAvailable) {
-      const { data: requests, error: requestsError } = await supabase
-        .from("support_requests")
-        .select("id, user_id, latitude, longitude, location_updated_at")
-        .neq("user_id", user.id)
-        .gte("created_at", thirtyMinutesAgo);
+      const { data: nearbyRequestId, error: requestsError } =
+        await supabase.rpc("find_nearby_support_request", {
+          current_latitude: currentLatitude,
+          current_longitude: currentLongitude,
+        });
 
       if (requestsError) {
         console.error("nearby requests check error:", requestsError.message);
         return;
       }
 
-      if (!requests || requests.length === 0) {
-        return;
-      }
-
-      const requestIds = requests.map((request) => request.id);
-
-      const { data: alreadyMatchedRequests, error: alreadyMatchedError } =
-        await supabase
-          .from("matchings")
-          .select("support_request_id")
-          .in("support_request_id", requestIds);
-
-      if (alreadyMatchedError) {
-        console.error(
-          "existing request matching error:",
-          alreadyMatchedError.message,
-        );
-        return;
-      }
-
-      const matchedRequestIds = new Set(
-        alreadyMatchedRequests?.map(
-          (matching) => matching.support_request_id,
-        ) ?? [],
-      );
-
-      // まだ成立していない依頼のうち、現在地から100m以内のものをマッチング候補にする
-      const nearbyRequest = requests.find((request) => {
-        if (matchedRequestIds.has(request.id)) {
-          return false;
-        }
-
-        if (request.latitude === null || request.longitude === null) {
-          return false;
-        }
-
-        const distance = getDistance(
-          currentLatitude,
-          currentLongitude,
-          request.latitude,
-          request.longitude,
-        );
-
-        return distance <= 100;
-      });
-
+      const nearbyRequest = nearbyRequestId ? { id: nearbyRequestId } : null;
       if (!nearbyRequest) {
         return;
       }

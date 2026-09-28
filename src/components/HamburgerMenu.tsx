@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const supabase = createClient();
 
@@ -16,6 +16,7 @@ export default function HamburgerMenu() {
     useState(false);
   const [hasMessageNotification, setHasMessageNotification] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   // マッチング成立・相手からのキャンセル・相手からの終了が未確認なら、マッチング通知マークを表示する
   useEffect(() => {
@@ -317,8 +318,7 @@ export default function HamburgerMenu() {
           const newMessage = payload.new as {
             sender_id: string;
           };
-
-          if (newMessage.sender_id !== user.id) {
+          if (newMessage.sender_id !== user.id && pathname !== "/messages") {
             setHasMessageNotification(true);
           }
         },
@@ -328,7 +328,7 @@ export default function HamburgerMenu() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, pathname]);
 
   // 30分以内にマッチングしなかったサポート依頼が未確認なら通知マークを表示する
   useEffect(() => {

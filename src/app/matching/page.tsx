@@ -495,19 +495,23 @@ export default function MatchingPage() {
     }
 
     const fetchMatchedProfile = async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("nickname, avatar_url")
-        .eq("id", matchedUserId)
-        .single();
+      const { data, error } = await supabase.rpc("get_visible_profiles", {
+        target_user_ids: [matchedUserId],
+      });
 
       if (error) {
         console.error("matched profile error:", error.message);
         return;
       }
 
-      setMatchedNickname(data.nickname);
-      setMatchedAvatarUrl(data.avatar_url);
+      const profile = data?.[0];
+
+      if (!profile) {
+        return;
+      }
+
+      setMatchedNickname(profile.nickname ?? "");
+      setMatchedAvatarUrl(profile.avatar_url ?? null);
     };
     fetchMatchedProfile();
   }, [matchedUserId]);
