@@ -184,6 +184,7 @@ export default function HamburgerMenu() {
     };
 
     const handleMatchingNotificationRead = () => {
+      setHasNotification(false);
       checkNotifications();
     };
     checkNotifications();

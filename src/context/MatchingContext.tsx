@@ -206,18 +206,11 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
           ? { id: nearbySupporterId }
           : null;
         if (nearbySupporter) {
-          const { data: createdMatching, error: createMatchingError } =
-            await supabase
-              .from("matchings")
-              .insert({
-                support_request_id: activeRequest.id,
-                supporter_id: nearbySupporter.id,
-                status: "active",
-                updated_at: new Date().toISOString(),
-              })
-              .select("id")
-              .single();
-
+          const { data: createdMatchingId, error: createMatchingError } =
+            await supabase.rpc("create_matching_if_valid", {
+              target_request_id: activeRequest.id,
+              target_supporter_id: nearbySupporter.id,
+            });
           if (createMatchingError) {
             if (createMatchingError.code !== "23505") {
               console.error(
@@ -229,7 +222,7 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
             const { error: supportOffError } = await supabase.rpc(
               "set_matched_supporter_unavailable",
               {
-                target_matching_id: createdMatching.id,
+                target_matching_id: createdMatchingId,
               },
             );
 
@@ -261,16 +254,13 @@ export function MatchingProvider({ children }: { children: React.ReactNode }) {
       if (!nearbyRequest) {
         return;
       }
-
-      const { error: createMatchingError } = await supabase
-        .from("matchings")
-        .insert({
-          support_request_id: nearbyRequest.id,
-          supporter_id: user.id,
-          status: "active",
-          updated_at: new Date().toISOString(),
-        });
-
+      const { error: createMatchingError } = await supabase.rpc(
+        "create_matching_if_valid",
+        {
+          target_request_id: nearbyRequest.id,
+          target_supporter_id: user.id,
+        },
+      );
       if (createMatchingError) {
         // 同じマッチングが同時に2回作られそうになった場合は、2件目だけ作らない
         if (createMatchingError.code !== "23505") {

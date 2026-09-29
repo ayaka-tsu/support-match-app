@@ -598,23 +598,10 @@ export default function MatchingPage() {
     if (!matchingId) {
       return;
     }
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return;
-    }
-    const { error } = await supabase
-      .from("matchings")
-      .update({
-        status: "ended",
-        ended_at: new Date().toISOString(),
-        ended_by: user.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", matchingId);
-
+    const { error } = await supabase.rpc("change_matching_status", {
+      target_matching_id: matchingId,
+      target_action: "end",
+    });
     if (error) {
       console.error("matching end error:", error.message);
       return;
@@ -645,24 +632,10 @@ export default function MatchingPage() {
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return;
-    }
-
-    const { error } = await supabase
-      .from("matchings")
-      .update({
-        status: "canceled",
-        canceled_by: user.id,
-        ended_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", matchingId);
-
+    const { error } = await supabase.rpc("change_matching_status", {
+      target_matching_id: matchingId,
+      target_action: "cancel",
+    });
     if (error) {
       console.error("matching cancel error:", error.message);
       return;
@@ -676,14 +649,10 @@ export default function MatchingPage() {
   const handleCloseCanceledByOther = async () => {
     if (!matchingId) return;
 
-    const { error } = await supabase
-      .from("matchings")
-      .update({
-        canceled_seen_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", matchingId);
-
+    const { error } = await supabase.rpc("mark_matching_notification_seen", {
+      target_matching_id: matchingId,
+      target_notification: "canceled",
+    });
     if (error) {
       console.error("canceled seen update error:", error.message);
       return;
@@ -696,14 +665,10 @@ export default function MatchingPage() {
   const handleCloseEndedByOther = async () => {
     if (!matchingId) return;
 
-    const { error } = await supabase
-      .from("matchings")
-      .update({
-        ended_seen_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", matchingId);
-
+    const { error } = await supabase.rpc("mark_matching_notification_seen", {
+      target_matching_id: matchingId,
+      target_notification: "ended",
+    });
     if (error) {
       console.error("ended seen update error:", error.message);
       return;
@@ -717,38 +682,22 @@ export default function MatchingPage() {
   const handleCloseNewMatching = async () => {
     if (!matchingId) return;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { error: seenError } = await supabase.rpc(
+      "mark_matching_notification_seen",
+      {
+        target_matching_id: matchingId,
+        target_notification: "matching",
+      },
+    );
 
-    if (!user) return;
-
-    const { data: matchingData, error: matchingError } = await supabase
-      .from("matchings")
-      .select("supporter_id, support_request_id")
-      .eq("id", matchingId)
-      .single();
-
-    if (matchingError) {
-      console.error("matching seen check error:", matchingError.message);
+    if (seenError) {
+      console.error("matching seen update error:", seenError.message);
       return;
     }
 
-    if (matchingData.supporter_id === user.id) {
-      await supabase
-        .from("matchings")
-        .update({ supporter_seen_at: new Date().toISOString() })
-        .eq("id", matchingId);
-    } else {
-      await supabase
-        .from("matchings")
-        .update({ requester_seen_at: new Date().toISOString() })
-        .eq("id", matchingId);
-    }
     window.dispatchEvent(new Event("matching-notification-read"));
     setIsNewMatching(false);
   };
-
   // マッチング成立時刻を基準に1時間後を計算し、時間切れになったマッチングを自動終了する
   useEffect(() => {
     if (!isMatching || !matchingId || !matchingCreatedAt) {
@@ -756,19 +705,13 @@ export default function MatchingPage() {
     }
     const createdTime = new Date(matchingCreatedAt).getTime();
     const oneHour = 60 * 60 * 1000;
-    const automaticEndTime = new Date(createdTime + oneHour).toISOString();
     const remainingTime = createdTime + oneHour - Date.now();
 
     const endMatchingAutomatically = async () => {
-      const { error } = await supabase
-        .from("matchings")
-        .update({
-          status: "ended",
-          ended_at: automaticEndTime,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", matchingId);
-
+      const { error } = await supabase.rpc("change_matching_status", {
+        target_matching_id: matchingId,
+        target_action: "auto_end",
+      });
       if (error) {
         console.error("automatic matching end error:", error.message);
         return;
