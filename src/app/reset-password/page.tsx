@@ -23,6 +23,24 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      const code = new URLSearchParams(window.location.search).get("code");
+
+      if (code) {
+        const { error: exchangeError } =
+          await supabase.auth.exchangeCodeForSession(code);
+
+        if (exchangeError) {
+          console.error(exchangeError.message);
+          return;
+        }
+      }
+    }
+
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });
@@ -30,17 +48,16 @@ export default function ResetPasswordPage() {
     if (error) {
       if (error.code === "same_password") {
         toast.error(
-          "以前と同じパスワードは設定できません。\n別のパスワードを入力してください",
+          "以前と同じパスワードは設定できません。\n別のパスワードを入力してください。",
           { duration: 5000 },
         );
       } else {
         toast.error("パスワードを再設定できませんでした");
+        console.error(error.message);
       }
 
-      console.error(error.message);
       return;
     }
-
     toast.success("パスワードを再設定しました");
     router.push("/login");
   };
