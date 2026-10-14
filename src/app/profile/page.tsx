@@ -107,6 +107,15 @@ export default function ProfilePage() {
               >
                 編集する
               </Link>
+
+              <div className="mt-6">
+                <Link
+                  href="/profile/withdraw"
+                  className="button-interaction inline-block text-xs text-[#b85f65] underline underline-offset-4"
+                >
+                  退会する
+                </Link>
+              </div>
             </div>
           </>
         )}

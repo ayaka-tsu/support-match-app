@@ -21,6 +21,9 @@ export default function MessagesPage() {
     }[]
   >([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [withdrawnUserIds, setWithdrawnUserIds] = useState<string[]>([]);
+  const [isWithdrawalChecked, setIsWithdrawalChecked] = useState(false);
+  const [messageStatusError, setMessageStatusError] = useState("");
   const [isWithinMessageGracePeriod, setIsWithinMessageGracePeriod] =
     useState(false);
   const [canSendMessage, setCanSendMessage] = useState(false);
@@ -46,17 +49,103 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const selectedNickname =
-    conversationNames.find(
-      (conversation) =>
-        matchingId && conversation.matchingIds.includes(matchingId),
-    )?.nickname ?? null;
+  // 退会記録にある相手だけ、名前と画像の表示を切り替える
+  const visibleConversations = conversationNames.map((conversation) => {
+    const isWithdrawn = withdrawnUserIds.includes(conversation.userId);
 
-  const selectedAvatarUrl =
-    conversationNames.find(
-      (conversation) =>
-        matchingId && conversation.matchingIds.includes(matchingId),
-    )?.avatarUrl ?? null;
+    return {
+      ...conversation,
+      isWithdrawn,
+      nickname: isWithdrawn ? "Unknown" : conversation.nickname,
+      avatarUrl: isWithdrawn ? null : conversation.avatarUrl,
+    };
+  });
+
+  const selectedConversation = visibleConversations.find(
+    (conversation) =>
+      matchingId && conversation.matchingIds.includes(matchingId),
+  );
+  const selectedNickname = selectedConversation?.nickname ?? null;
+  const selectedAvatarUrl = selectedConversation?.avatarUrl ?? null;
+  const isSelectedUserWithdrawn = selectedConversation?.isWithdrawn ?? false;
+  const isSendAllowed =
+    canSendMessage &&
+    isWithdrawalChecked &&
+    !!selectedConversation &&
+    !isSelectedUserWithdrawn;
+
+  // 画面を開いたとき・戻ったとき・30秒ごとに、相手の退会状態を確認する
+  useEffect(() => {
+    if (!userId) return;
+
+    let isActive = true;
+    let isChecking = false;
+    const controller = new AbortController();
+
+    const checkWithdrawnUsers = async () => {
+      if (isChecking) return;
+      isChecking = true;
+
+      try {
+        const response = await fetch("/api/withdrawn-users", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("退会状態を確認できませんでした");
+        }
+
+        const result: { withdrawnUserIds?: unknown } = await response.json();
+        const ids = result.withdrawnUserIds;
+
+        if (
+          !Array.isArray(ids) ||
+          !ids.every((id: unknown) => typeof id === "string")
+        ) {
+          throw new Error("退会状態の応答が正しくありません");
+        }
+
+        if (!isActive) return;
+
+        setWithdrawnUserIds((previous) => [...new Set([...previous, ...ids])]);
+        setIsWithdrawalChecked(true);
+        setMessageStatusError("");
+      } catch (error) {
+        if (!isActive) return;
+        console.error("conversation withdrawal check error:", error);
+        setIsWithdrawalChecked(false);
+        setMessageStatusError(
+          "退会状態を確認できないため、送信を停止しています。画面を再読み込みしてください。",
+        );
+      } finally {
+        isChecking = false;
+      }
+    };
+
+    const checkOnReturn = () => {
+      if (document.visibilityState === "visible") {
+        void checkWithdrawnUsers();
+      }
+    };
+
+    void checkWithdrawnUsers();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void checkWithdrawnUsers();
+      }
+    }, 30_000);
+    window.addEventListener("focus", checkOnReturn);
+    document.addEventListener("visibilitychange", checkOnReturn);
+
+    return () => {
+      isActive = false;
+      controller.abort();
+      window.clearInterval(interval);
+      window.removeEventListener("focus", checkOnReturn);
+      document.removeEventListener("visibilitychange", checkOnReturn);
+    };
+  }, [userId]);
 
   // ログイン中のユーザーを取得し、サポートする側・依頼した側のどちらでも現在のマッチングを特定する
   useEffect(() => {
@@ -498,6 +587,7 @@ export default function MessagesPage() {
       supabase.removeChannel(channel);
     };
   }, [matchingId, userId]);
+
   // 開いた会話の相手から届いた未読メッセージを既読にし、通知状態も更新する
   useEffect(() => {
     if (!matchingId || !userId) return;
@@ -533,8 +623,56 @@ export default function MessagesPage() {
 
   // 入力内容を現在のマッチングに紐づけて送信し、送信後に入力欄をリセットする
   const handleSend = async () => {
-    if (!canSendMessage) return;
+    if (!isSendAllowed) return;
     if (!userId || !matchingId || !content.trim()) return;
+
+    // 画面表示後に相手が退会した場合も、送信直前に再確認する
+    try {
+      const [withdrawalResult, permissionResult] = await Promise.all([
+        supabase.rpc("has_withdrawn_matching_participant", {
+          target_matching_id: matchingId,
+        }),
+        supabase.rpc("can_send_message", {
+          target_matching_id: matchingId,
+        }),
+      ]);
+
+      if (
+        withdrawalResult.error ||
+        permissionResult.error ||
+        typeof withdrawalResult.data !== "boolean" ||
+        typeof permissionResult.data !== "boolean"
+      ) {
+        throw new Error("送信可否を確認できませんでした");
+      }
+
+      if (withdrawalResult.data) {
+        if (selectedConversation) {
+          setWithdrawnUserIds((previous) => [
+            ...new Set([...previous, selectedConversation.userId]),
+          ]);
+        }
+        setCanSendMessage(false);
+        setIsWithinMessageGracePeriod(false);
+        return;
+      }
+
+      if (!permissionResult.data) {
+        setCanSendMessage(false);
+        setIsWithinMessageGracePeriod(false);
+        setMessageStatusError(
+          "この会話は送信できる時間を過ぎたか、終了しています。",
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("message permission check error:", error);
+      setIsWithdrawalChecked(false);
+      setMessageStatusError(
+        "送信可否を確認できませんでした。画面を再読み込みしてください。",
+      );
+      return;
+    }
 
     const { data, error } = await supabase
       .from("messages")
@@ -549,6 +687,9 @@ export default function MessagesPage() {
 
     if (error) {
       console.error("message send error:", error.message);
+      setMessageStatusError(
+        "メッセージを送信できませんでした。画面を再読み込みしてください。",
+      );
       return;
     }
 
@@ -556,6 +697,7 @@ export default function MessagesPage() {
       setMessages((prevMessages) => [...prevMessages, data]);
     }
 
+    setMessageStatusError("");
     setContent("");
 
     if (textareaRef.current) {
@@ -568,6 +710,11 @@ export default function MessagesPage() {
       <HamburgerMenu />
       <div className="mx-auto w-full max-w-4xl px-6">
         <h1 className="page-title">メッセージ</h1>
+        {messageStatusError && (
+          <p role="alert" className="mt-2 text-xs leading-5 text-[#c96f6f]">
+            {messageStatusError}
+          </p>
+        )}
       </div>
       {isMatchingChecked && !showHistory && !matchingId && (
         <div className="mx-auto w-full max-w-4xl px-6 pt-6">
@@ -611,7 +758,7 @@ export default function MessagesPage() {
               </svg>
             </button>
             <div className="flex flex-col gap-3">
-              {conversationNames.map((conversation) => (
+              {visibleConversations.map((conversation) => (
                 <button
                   key={conversation.userId}
                   type="button"
@@ -633,7 +780,7 @@ export default function MessagesPage() {
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    {conversation.avatarUrl ? (
+                    {conversation.isWithdrawn ? null : conversation.avatarUrl ? (
                       <Image
                         src={conversation.avatarUrl}
                         alt={`${conversation.nickname}のプロフィール画像`}
@@ -680,7 +827,7 @@ export default function MessagesPage() {
                   />
                 </svg>
               </button>
-              {selectedAvatarUrl ? (
+              {isSelectedUserWithdrawn ? null : selectedAvatarUrl ? (
                 <Image
                   src={selectedAvatarUrl}
                   alt={`${selectedNickname}のプロフィール画像`}
@@ -699,16 +846,25 @@ export default function MessagesPage() {
               </p>
             </div>
           )}
-          {isWithinMessageGracePeriod && messageAvailableUntil && (
+          {!isSelectedUserWithdrawn &&
+            isWithinMessageGracePeriod &&
+            messageAvailableUntil && (
+              <div className="mx-auto w-full max-w-4xl px-6">
+                <p className="mt-1 text-xs leading-5 text-stone-500">
+                  この相手とのメッセージは
+                  <br />
+                  {new Date(messageAvailableUntil).toLocaleTimeString("ja-JP", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                  まで利用できます
+                </p>
+              </div>
+            )}
+          {isSelectedUserWithdrawn && (
             <div className="mx-auto w-full max-w-4xl px-6">
               <p className="mt-1 text-xs leading-5 text-stone-500">
-                この相手とのメッセージは
-                <br />
-                {new Date(messageAvailableUntil).toLocaleTimeString("ja-JP", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-                まで利用できます
+                相手は退会しました。過去の履歴は閲覧できます。
               </p>
             </div>
           )}
@@ -753,7 +909,7 @@ export default function MessagesPage() {
                       {!isOwnMessage && (
                         <div className="mr-2 flex items-start gap-2">
                           <div className="flex shrink-0 flex-col items-center">
-                            {selectedAvatarUrl ? (
+                            {isSelectedUserWithdrawn ? null : selectedAvatarUrl ? (
                               <Image
                                 src={selectedAvatarUrl}
                                 alt={`${selectedNickname ?? "相手"}のプロフィール画像`}
@@ -804,7 +960,7 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {canSendMessage && (
+          {isSendAllowed && (
             <div className="mx-auto flex w-full max-w-2xl items-end gap-2 px-4 py-3">
               <textarea
                 ref={textareaRef}
