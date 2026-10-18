@@ -30,7 +30,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Link href="/" className="inline-flex items-center px-4 py-3">
+        <Link
+          href="/"
+          className="inline-flex self-start items-center mx-4 my-3"
+        >
           <Image
             src="/mitete-logo.png"
             alt="mitete ロゴ"

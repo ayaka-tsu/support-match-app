@@ -10,9 +10,8 @@ export default function ConceptPage() {
 
         <section className="mt-8 rounded-3xl border border-[#ead6d6] bg-[#fffafa] px-6 py-8 sm:px-8">
           <p className="text-lg font-medium text-[#a97d7d]">
-            𓂃𓈒𓏸 ほんの少し、見ててもらえたら 𓂃𓈒𓏸
+            𓂃𓈒𓏸 少しだけ見ててもらえたら 𓂃𓈒𓏸
           </p>
-
           <div className="mt-6 ml-8 space-y-5 text-sm leading-7 text-stone-600">
             <p>
               子どもが小さいと、

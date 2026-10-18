@@ -515,7 +515,7 @@ export default function HamburgerMenu() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed right-5 top-5 z-40 flex h-8 w-8 flex-col items-end justify-center gap-1.5"
+        className="fixed right-5 top-5 z-40 flex h-8 w-8 cursor-pointer flex-col items-end justify-center gap-1.5"
         style={{ position: "fixed" }}
         aria-label="メニューを開く"
       >
