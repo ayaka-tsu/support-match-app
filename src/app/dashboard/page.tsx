@@ -158,6 +158,14 @@ export default async function DashboardPage() {
             <span>›</span>
           </Link>
         </div>
+        <div className="mt-8 text-center">
+          <Link
+            href="/contact"
+            className="text-xs text-stone-500 underline underline-offset-4 transition-colors hover:text-[#a97d7d]"
+          >
+            お問い合わせ
+          </Link>
+        </div>
       </div>
     </main>
   );

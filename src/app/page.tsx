@@ -89,6 +89,13 @@ export default async function Home() {
             >
               プライバシーポリシー
             </Link>
+
+            <Link
+              href="/contact"
+              className="underline underline-offset-4 transition-colors hover:text-[#a97d7d]"
+            >
+              お問い合わせ
+            </Link>
           </div>
 
           <p>© 2026 見てて</p>

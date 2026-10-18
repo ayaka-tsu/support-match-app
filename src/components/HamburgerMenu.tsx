@@ -580,6 +580,15 @@ export default function HamburgerMenu() {
                   <span>ログイン</span>
                   <span className="text-xl">›</span>
                 </Link>
+
+                <Link
+                  href="/contact"
+                  onClick={() => setIsOpen(false)}
+                  className="menu-item"
+                >
+                  <span>お問い合わせ</span>
+                  <span className="text-xl">›</span>
+                </Link>
               </>
             )}
 
@@ -644,6 +653,15 @@ export default function HamburgerMenu() {
                     )}
                   </span>
 
+                  <span className="text-xl">›</span>
+                </Link>
+
+                <Link
+                  href="/contact"
+                  onClick={() => setIsOpen(false)}
+                  className="menu-item"
+                >
+                  <span>お問い合わせ</span>
                   <span className="text-xl">›</span>
                 </Link>
 

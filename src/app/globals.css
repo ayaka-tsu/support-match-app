@@ -39,10 +39,9 @@ button:active,
   justify-content: space-between;
   background-color: #d9a3a3;
   color: white;
-  padding: 1rem 1.25rem;
+  padding: 0.625rem 1.25rem;
   transition: background-color 150ms ease;
 }
-
 .menu-item:hover {
   background-color: #cf9696;
 }
