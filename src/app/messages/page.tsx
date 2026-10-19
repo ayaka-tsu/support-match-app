@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 // import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import HamburgerMenu from "@/components/HamburgerMenu";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import Image from "next/image";
 
 const supabase = createClient();
@@ -41,6 +42,8 @@ export default function MessagesPage() {
   >([]);
   const [showHistory, setShowHistory] = useState(false);
   const [isMatchingChecked, setIsMatchingChecked] = useState(false);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -73,6 +76,11 @@ export default function MessagesPage() {
     isWithdrawalChecked &&
     !!selectedConversation &&
     !isSelectedUserWithdrawn;
+
+  const isInitialLoading =
+    !isMatchingChecked ||
+    isLoadingConversations ||
+    (!isWithdrawalChecked && !messageStatusError);
 
   // 画面を開いたとき・戻ったとき・30秒ごとに、相手の退会状態を確認する
   useEffect(() => {
@@ -442,9 +450,20 @@ export default function MessagesPage() {
       }
     };
 
-    getConversations();
-  }, [userId]);
+    if (!userId) return;
 
+    let isActive = true;
+
+    getConversations().finally(() => {
+      if (isActive) {
+        setIsLoadingConversations(false);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [userId]);
   // マッチング中、または終了後1時間以内かを確認してメッセージ送信可否を決める
   useEffect(() => {
     const checkCanSendMessage = async () => {
@@ -496,6 +515,7 @@ export default function MessagesPage() {
     const getMessages = async () => {
       if (!matchingId) return;
 
+      setIsLoadingMessages(true);
       const selectedConversation = conversationNames.find((conversation) =>
         conversation.matchingIds.includes(matchingId),
       );
@@ -517,7 +537,9 @@ export default function MessagesPage() {
       setMessages(data ?? []);
     };
 
-    getMessages();
+    getMessages().finally(() => {
+      setIsLoadingMessages(false);
+    });
   }, [matchingId, conversationNames]);
 
   // 新着メッセージと既読更新をリアルタイムで受け取り、表示へ即時反映する
@@ -716,7 +738,8 @@ export default function MessagesPage() {
           </p>
         )}
       </div>
-      {isMatchingChecked && !showHistory && !matchingId && (
+      {isInitialLoading && <LoadingSpinner />}
+      {!isInitialLoading && !showHistory && !matchingId && (
         <div className="mx-auto w-full max-w-4xl px-6 pt-6">
           <button
             type="button"
@@ -734,7 +757,7 @@ export default function MessagesPage() {
           </button>
         </div>
       )}
-      {showHistory && (
+      {!isInitialLoading && showHistory && (
         <div className="mx-auto min-h-0 w-full max-w-4xl flex-1 overflow-y-auto px-6 py-2">
           <div className="flex items-start gap-3">
             <button
@@ -806,7 +829,7 @@ export default function MessagesPage() {
         </div>
       )}
 
-      {!showHistory && matchingId && (
+      {!isInitialLoading && !showHistory && matchingId && (
         <>
           {selectedNickname && (
             <div className="mx-auto flex w-full max-w-4xl items-center gap-3 px-6 py-2">
@@ -870,92 +893,94 @@ export default function MessagesPage() {
           )}
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-4xl px-6">
-              {messages.map((message, index) => {
-                const currentDate = new Date(
-                  message.created_at,
-                ).toLocaleDateString("ja-JP");
+              {isLoadingMessages && <LoadingSpinner />}
+              {!isLoadingMessages &&
+                messages.map((message, index) => {
+                  const currentDate = new Date(
+                    message.created_at,
+                  ).toLocaleDateString("ja-JP");
 
-                const previousDate =
-                  index > 0
-                    ? new Date(
-                        messages[index - 1].created_at,
-                      ).toLocaleDateString("ja-JP")
-                    : null;
+                  const previousDate =
+                    index > 0
+                      ? new Date(
+                          messages[index - 1].created_at,
+                        ).toLocaleDateString("ja-JP")
+                      : null;
 
-                const showDate = currentDate !== previousDate;
+                  const showDate = currentDate !== previousDate;
 
-                const messageTime = new Date(
-                  message.created_at,
-                ).toLocaleTimeString("ja-JP", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
+                  const messageTime = new Date(
+                    message.created_at,
+                  ).toLocaleTimeString("ja-JP", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
 
-                const isOwnMessage = message.sender_id === userId;
+                  const isOwnMessage = message.sender_id === userId;
 
-                return (
-                  <div key={message.id}>
-                    {showDate && (
-                      <p className="my-4 text-center text-sm text-stone-500">
-                        {currentDate}
-                      </p>
-                    )}
+                  return (
+                    <div key={message.id}>
+                      {showDate && (
+                        <p className="my-4 text-center text-sm text-stone-500">
+                          {currentDate}
+                        </p>
+                      )}
 
-                    <div
-                      className={`mb-3 flex ${
-                        isOwnMessage ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      {!isOwnMessage && (
-                        <div className="mr-2 flex items-start gap-2">
-                          <div className="flex shrink-0 flex-col items-center">
-                            {isSelectedUserWithdrawn ? null : selectedAvatarUrl ? (
-                              <Image
-                                src={selectedAvatarUrl}
-                                alt={`${selectedNickname ?? "相手"}のプロフィール画像`}
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-sm font-medium text-white">
-                                {selectedNickname?.charAt(0).toUpperCase()}
+                      <div
+                        className={`mb-3 flex ${
+                          isOwnMessage ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        {!isOwnMessage && (
+                          <div className="mr-2 flex items-start gap-2">
+                            <div className="flex shrink-0 flex-col items-center">
+                              {isSelectedUserWithdrawn ? null : selectedAvatarUrl ? (
+                                <Image
+                                  src={selectedAvatarUrl}
+                                  alt={`${selectedNickname ?? "相手"}のプロフィール画像`}
+                                  width={32}
+                                  height={32}
+                                  className="h-8 w-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d9a3a3] text-sm font-medium text-white">
+                                  {selectedNickname?.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <div className="max-w-xs break-words rounded-2xl bg-[#ead6d2] px-4 py-2">
+                                <p className="whitespace-pre-wrap">
+                                  {message.content}
+                                </p>
                               </div>
-                            )}
-                          </div>
 
-                          <div>
-                            <div className="max-w-xs break-words rounded-2xl bg-[#ead6d2] px-4 py-2">
+                              <small className="text-stone-400">
+                                {messageTime}
+                              </small>
+                            </div>
+                          </div>
+                        )}
+
+                        {isOwnMessage && (
+                          <div className="flex max-w-[70vw] flex-col items-end">
+                            <div className="max-w-xs break-words rounded-2xl bg-[#d4c2bb] px-4 py-2">
                               <p className="whitespace-pre-wrap">
                                 {message.content}
                               </p>
                             </div>
 
                             <small className="text-stone-400">
+                              {message.read_at && "既読 "}
                               {messageTime}
                             </small>
                           </div>
-                        </div>
-                      )}
-
-                      {isOwnMessage && (
-                        <div className="flex max-w-[70vw] flex-col items-end">
-                          <div className="max-w-xs break-words rounded-2xl bg-[#d4c2bb] px-4 py-2">
-                            <p className="whitespace-pre-wrap">
-                              {message.content}
-                            </p>
-                          </div>
-
-                          <small className="text-stone-400">
-                            {message.read_at && "既読 "}
-                            {messageTime}
-                          </small>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
               <div ref={messagesEndRef} />
             </div>
           </div>

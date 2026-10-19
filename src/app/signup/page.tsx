@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const supabase = createClient();
 
@@ -12,6 +13,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [isAgreed, setIsAgreed] = useState(false);
   const [agreementError, setAgreementError] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   const handleSignup = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -26,6 +28,9 @@ export default function SignupPage() {
       return;
     }
 
+    if (isSigningUp) return;
+    setIsSigningUp(true);
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -34,14 +39,28 @@ export default function SignupPage() {
       },
     });
 
+    setIsSigningUp(false);
+
     if (error) {
       toast.error("登録できませんでした。入力内容を確認してください");
       console.error(error.message);
       return;
     }
-
     toast.success("登録確認メールを送信しました");
   };
+
+  if (isSigningUp) {
+    return (
+      <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+        <div className="mx-auto w-full max-w-md">
+          <div className="flex justify-center">
+            <h1 className="page-title">新規登録</h1>
+          </div>
+          <LoadingSpinner />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">

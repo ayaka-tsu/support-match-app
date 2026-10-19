@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const supabase = createClient();
 
@@ -70,10 +71,13 @@ export default function ProfileGate({
     return <>{children}</>;
   }
 
-  // プロフィール確認が終わるまでは元の画面を描画せず、未設定画面が一瞬見えるのを防ぐ
+  // プロフィール確認中は読み込み表示にし、確認後にページを表示する
   if (checkedPath !== pathname) {
-    return null;
+    return (
+      <div className="page-background min-h-[calc(100dvh-94px)]">
+        <LoadingSpinner />
+      </div>
+    );
   }
-
   return <>{children}</>;
 }

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import HamburgerMenu from "@/components/HamburgerMenu";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const supabase = createClient();
 
@@ -392,6 +393,7 @@ export default function SupportRequestsPage() {
 
         <div className="mx-auto w-full max-w-2xl">
           <h1 className="page-title">サポート依頼</h1>
+          <LoadingSpinner />
         </div>
       </main>
     );

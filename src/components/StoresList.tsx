@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useStore } from "@/context/StoreContext";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const supabase = createClient();
 
@@ -193,6 +194,10 @@ export default function StoresList({ stores }: StoreListProps) {
     const target = searchType === "name" ? store.name : (store.address ?? "");
     return normalizeText(target).includes(normalizeText(search));
   });
+
+  if (isCheckingRequest) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="w-full">

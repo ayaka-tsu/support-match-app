@@ -4,12 +4,14 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const supabase = createClient();
 
 export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
   const router = useRouter();
 
   const handleResetPassword = async () => {
@@ -23,6 +25,9 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    if (isResetting) return;
+    setIsResetting(true);
+
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -35,6 +40,7 @@ export default function ResetPasswordPage() {
           await supabase.auth.exchangeCodeForSession(code);
 
         if (exchangeError) {
+          setIsResetting(false);
           console.error(exchangeError.message);
           return;
         }
@@ -46,6 +52,7 @@ export default function ResetPasswordPage() {
     });
 
     if (error) {
+      setIsResetting(false);
       if (error.code === "same_password") {
         toast.error(
           "以前と同じパスワードは設定できません。\n別のパスワードを入力してください。",
@@ -62,11 +69,21 @@ export default function ResetPasswordPage() {
     router.push("/login");
   };
 
+  if (isResetting) {
+    return (
+      <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+        <div className="mx-auto w-full max-w-md">
+          <h1 className="page-title text-center">パスワード再設定</h1>
+          <LoadingSpinner />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
       <div className="mx-auto w-full max-w-md">
         <h1 className="page-title text-center">パスワード再設定</h1>
-
         <div className="mt-8 space-y-5">
           <div>
             <label className="mb-2 block text-sm text-stone-600">

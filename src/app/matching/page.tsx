@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import HamburgerMenu from "@/components/HamburgerMenu";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -840,7 +841,9 @@ export default function MatchingPage() {
           <div className="mt-10 text-center">
             <p className="text-stone-600">現在マッチングはありません</p>
           </div>
-        ) : null}
+        ) : (
+          <LoadingSpinner />
+        )}
         {isCancelConfirmOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-6">
             <div className="w-full max-w-sm rounded-3xl bg-[#fbf5f3] p-6 text-center shadow-xl">

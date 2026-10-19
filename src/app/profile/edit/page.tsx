@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import HamburgerMenu from "@/components/HamburgerMenu";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
 import toast from "react-hot-toast";
@@ -250,6 +251,20 @@ export default function EditProfilePage() {
     }
     router.push("/profile");
   };
+
+  if (!isProfileLoaded) {
+    return (
+      <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+        <HamburgerMenu />
+
+        <div className="mx-auto w-full max-w-md">
+          <h1 className="page-title">プロフィール編集</h1>
+          <LoadingSpinner />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
       <HamburgerMenu />

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import HamburgerMenu from "@/components/HamburgerMenu";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import Image from "next/image";
 import SupportAvailableToggle from "@/components/SupportAvailableToggle";
 
@@ -60,7 +61,7 @@ export default function ProfilePage() {
 
       <div className="mx-auto w-full max-w-2xl">
         <h1 className="page-title">プロフィール</h1>
-
+        {!isProfileLoaded && <LoadingSpinner />}
         {isProfileLoaded && (
           <>
             {avatarUrl ? (

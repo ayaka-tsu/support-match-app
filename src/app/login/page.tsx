@@ -5,21 +5,27 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const supabase = createClient();
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const router = useRouter();
   const handleLogin = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      setIsLoggingIn(false);
       toast.error("メールアドレスまたはパスワードが違います");
       console.error(error.message);
       return;
@@ -41,13 +47,25 @@ export default function LoginPage() {
     router.push("/dashboard");
   };
 
+  if (isLoggingIn) {
+    return (
+      <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
+        <div className="mx-auto w-full max-w-md">
+          <div className="flex justify-center">
+            <h1 className="page-title">ログイン</h1>
+          </div>
+          <LoadingSpinner />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="page-background min-h-[calc(100dvh-94px)] px-6 py-6">
       <div className="mx-auto w-full max-w-md">
         <div className="flex justify-center">
           <h1 className="page-title">ログイン</h1>
         </div>
-
         <form
           onSubmit={handleLogin}
           className="mx-auto mt-8 w-full max-w-md space-y-5"
