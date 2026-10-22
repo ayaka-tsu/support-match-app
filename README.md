@@ -51,6 +51,8 @@ Google Chrome の DevTools「Sensors」で任意の位置情報を設定して�
 - マッチング相手とのメッセージ
 - マッチングの終了・キャンセル
 - 新着メッセージやマッチング状況の通知表示
+- 退会（アカウント・個人情報の削除、相手側のメッセージ履歴は保持）
+- お問い合わせフォーム
 
 ## 使用技術
 
@@ -66,6 +68,7 @@ Google Chrome の DevTools「Sensors」で任意の位置情報を設定して�
 ## 外部サービス・API
 
 - Supabase：認証、データベース、ストレージ、リアルタイム通信に使用
+- Formspree：お問い合わせフォームの送信・メール受信に使用
 
 ## 必須環境
 
@@ -85,6 +88,7 @@ npm install
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
 設定後、以下を実行します。
